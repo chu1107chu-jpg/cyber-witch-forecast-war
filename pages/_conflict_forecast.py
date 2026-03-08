@@ -270,6 +270,76 @@ NEWS_CONTEXT = [
 
 
 # ─────────────────────────────────────────────────────────
+#  ПРОФИЛИ ЛИДЕРОВ / ЗЛОДЕЯНИЯ / ФИНАНСОВОЕ ДАВЛЕНИЕ
+#  Модифицируют ИВПН на -0.10 … +0.15
+# ─────────────────────────────────────────────────────────
+LEADER_PROFILES = {
+    "🇺🇸 Трамп": {
+        "side": "A",
+        "age": 79,
+        "hawkishness": 0.72,
+        "domestic_approval": 0.44,
+        "election_months": 44,       # ноябрь 2028
+        "rationality": 0.52,        # непредсказуемость
+        "political_survival": 0.65,
+        "legacy_seeking": 0.80,     # последний срок → наследие
+        "why": "Непредсказуемость — ключевой риск-фактор. Выход из JCPOA, убийство Сулеймани, «fire & fury». "
+               "последний срок → ставка на наследие. Одобрение ~44% → давление искать внешнюю победу.",
+    },
+    "🇮🇷 Хаменеи": {
+        "side": "B",
+        "age": 85,
+        "hawkishness": 0.78,
+        "domestic_approval": 0.25,  # протесты 2022–2025
+        "election_months": 0,        # не выборный
+        "rationality": 0.65,
+        "political_survival": 0.90, # режим ядерная программа = страховка
+        "legacy_seeking": 0.88,
+        "why": "Внешняя угроза консолидирует режим. Массовые протесты 2022–2025. Ядерная программа "
+               "= единственная гарантия выживания. Возраст  85 → мышление наследия и сохранения режима.",
+    },
+}
+
+ATROCITY_REGISTRY = {
+    "🇺🇸 США": {
+        "events": [
+            {"year": 2003, "event": "Вторжение в Ирак без санкции СБ ООН", "severity": 0.70},
+            {"year": 2017, "event": "Ракетный удар по авиабазе Шайрат (Сирия)", "severity": 0.35},
+            {"year": 2020, "event": "Убийство Сулеймани дроном (Багдад)", "severity": 0.75},
+            {"year": 2024, "event": "Удары по проиранским структурам в Ираке/Сирии", "severity": 0.45},
+        ],
+        "score": 0.38,
+    },
+    "🇮🇷 Иран": {
+        "events": [
+            {"year": 2019, "event": "Атака дронов на Saudi Aramco через прокси", "severity": 0.55},
+            {"year": 2022, "event": "Массовые казни протестующих (500+)", "severity": 0.80},
+            {"year": 2023, "event": "Снабжение Хамас — теракт 7 октября", "severity": 0.85},
+            {"year": 2024, "event": "Запуск 300+ ракет и дронов по Израилю", "severity": 0.65},
+        ],
+        "score": 0.68,
+    },
+}
+
+FINANCIAL_STATE = {
+    "🇺🇸 США": {
+        "debt_gdp": 1.24,
+        "budget_deficit_pct": 6.2,
+        "recession_risk": 0.25,
+        "war_cost_annual_b": 120,
+        "lose_war_impact": "Потеря гегемонии на Ближнем Востоке. Нефть $120+. Рейтинг президента < 35%.",
+    },
+    "🇮🇷 Иран": {
+        "debt_gdp": 0.40,
+        "budget_deficit_pct": 5.5,
+        "recession_risk": 0.78,
+        "war_cost_annual_b": 28,
+        "lose_war_impact": "Смена режима. Ядерные объекты уничтожены. Коллапс КСИР. Экономика −30%.",
+    },
+}
+
+
+# ─────────────────────────────────────────────────────────
 #  МАРКОВ: МАТРИЦА ПЕРЕХОДОВ СОСТОЯНИЙ КОНФЛИКТА
 #  Каждая строка = из состояния i; каждый столбец = в состояние j
 #  Единица времени: 1 месяц
@@ -343,6 +413,32 @@ def compute_proba(ivpn: float) -> float:
 def compute_horizon(ivpn: float) -> float:
     """T_hor = T₀ · e^{-λ·ИВПН}  (мес.)"""
     return T0 * math.exp(-LAMBDA_T * ivpn)
+
+
+def compute_leader_adjustment(la: dict, lb: dict,
+                               atrocity_a: float, atrocity_b: float,
+                               recession_a: float, recession_b: float) -> float:
+    """
+    Корректировка ИВПН: [-0.10, +0.15]
+      + агрессивные лидеры / низкий рейтинг / выборы / злодеяния / возраст
+      - рациональные и популярные лидеры, стабильная экономика
+    """
+    # Агрессивность лидеров (ястреб = выше)
+    hawk       = 0.06 * la["hawkishness"] + 0.05 * lb["hawkishness"]
+    # Низкий рейтинг → Поиск внешней победы (rally around the flag)
+    approval   = 0.04 * (1 - la["domestic_approval"]) + 0.06 * (1 - lb["domestic_approval"])
+    # Выборы в течение 12 мес. → сигнал силы
+    election   = 0.05 if la["election_months"] <= 12 else 0.0
+    # Возраст 70+ → мышление наследия (хочу запечатлеть себя в истории)
+    age_a      = 0.03 if la["age"] >= 70 else 0.0
+    age_b      = 0.04 if lb["age"] >= 80 else (0.02 if lb["age"] >= 70 else 0.0)
+    # Злодеяния → дипломатический выход закрыт (после бомбардировки школы за стол не сядут)
+    atrocity   = 0.04 * atrocity_b + 0.02 * atrocity_a
+    # Рецессия + высокая цена проигрыша (Иран – смена режима) → повышает риск
+    fin        = 0.03 * recession_a + 0.05 * recession_b
+    total      = hawk + approval + election + age_a + age_b + atrocity + fin
+    # Центрируем (нейтральный случай ≈ 0)
+    return float(np.clip(total - 0.15, -0.10, 0.15))
 
 
 def force_ratio(m_a: float, m_b: float) -> float:
@@ -508,6 +604,94 @@ def render_conflict_page():
                         }
 
         # ── ФАКТОРЫ + пересчёт ───────────────────────────
+        # ── ПРОФИЛИ ЛИДЕРОВ, ЗЛОДЕЯНИЯ, ФИНАНСЫ ─────────────
+        leader_adj = 0.0
+        with st.expander("🧠 Профили лидеров, злодеяния и финансовое давление", expanded=False):
+            st.caption(
+                "Возраст, агрессивность, рейтинг, злодеяния и финансы модифицируют ИВПН на -0.10 … +0.15."
+            )
+
+            col_la, col_lb = st.columns(2)
+            ldr_vals = {}
+            for _col, _lk in [(col_la, "🇺🇸 Трамп"), (col_lb, "🇮🇷 Хаменеи")]:
+                ldef = LEADER_PROFILES[_lk]
+                atr_key = "🇺🇸 США" if ldef["side"] == "A" else "🇮🇷 Иран"
+                atr_def = ATROCITY_REGISTRY[atr_key]
+                _k = _lk.replace(" ", "_")
+                with _col:
+                    st.markdown(
+                        f"""<div style="background:rgba(255,255,255,0.55);border-radius:14px;
+                        padding:.7rem 1rem;border:1px solid rgba(255,255,255,0.7);
+                        margin-bottom:.6rem;font-size:.82rem;">
+                        <b>{_lk}</b><br>{ldef['why']}
+                        </div>""", unsafe_allow_html=True
+                    )
+                    _age  = st.slider("Возраст", 50, 95, ldef["age"], key=f"ldr_age_{_k}")
+                    _hawk = st.slider("Агрессивность (0=голубь, 1=ястреб)", 0.0, 1.0,
+                                      ldef["hawkishness"], 0.01, key=f"ldr_hawk_{_k}")
+                    _appr = st.slider("Рейтинг одобрения", 0.0, 1.0,
+                                      ldef["domestic_approval"], 0.01, key=f"ldr_appr_{_k}")
+                    _elec = st.number_input("Мес. до выборов (0=нет)", 0, 120,
+                                            ldef["election_months"], key=f"ldr_elec_{_k}")
+                    _atros = st.slider(
+                        "Индекс злодеяний (0=нет, 1=геноцид)", 0.0, 1.0,
+                        atr_def["score"], 0.01, key=f"ldr_atrocity_{_k}",
+                        help="Накопленные злодеяния → дипломатический выход закрыт "
+                             "(после бомбардировки школы за стол не садятся)",
+                    )
+                    with st.expander("📋 Зафиксированные акции", expanded=False):
+                        for ev in atr_def["events"]:
+                            c = "#e74c3c" if ev["severity"] > 0.6 else "#e67e22" if ev["severity"] > 0.4 else "#f39c12"
+                            st.markdown(
+                                f'<span style="color:{c};">&#9679;</span> **{ev["year"]}** — {ev["event"]}',
+                                unsafe_allow_html=True)
+                    ldr_vals[_lk] = {
+                        "age": _age, "hawkishness": _hawk,
+                        "domestic_approval": _appr, "election_months": int(_elec),
+                        "atrocity_score": _atros,
+                    }
+
+            st.markdown("**💰 Финансовое состояние и цена проигрыша:**")
+            fin_cols = st.columns(2)
+            fin_vals = {}
+            for _fc, _fk in [(fin_cols[0], "🇺🇸 США"), (fin_cols[1], "🇮🇷 Иран")]:
+                fd = FINANCIAL_STATE[_fk]
+                with _fc:
+                    st.markdown(
+                        f"""<div style="background:rgba(255,255,255,0.55);border-radius:12px;
+                        padding:.6rem .9rem;border:1px solid rgba(255,255,255,0.7);
+                        font-size:.82rem;">
+                        <b>{_fk}</b><br>
+                        📊 Долг/ВВП: <b>{fd['debt_gdp']:.0%}</b> · Дефицит: <b>{fd['budget_deficit_pct']:.1f}%</b><br>
+                        💸 Война: ~${fd['war_cost_annual_b']}B/год<br>
+                        ☠️ Проигрыш: {fd['lose_war_impact']}
+                        </div>""", unsafe_allow_html=True
+                    )
+                    _rec = st.slider("Риск рецессии", 0.0, 1.0,
+                                     fd["recession_risk"], 0.01, key=f"fin_rec_{_fk}")
+                    fin_vals[_fk] = _rec
+
+            _la = ldr_vals.get("🇺🇸 Трамп", LEADER_PROFILES["🇺🇸 Трамп"])
+            _lb = ldr_vals.get("🇮🇷 Хаменеи", LEADER_PROFILES["🇮🇷 Хаменеи"])
+            _fa = fin_vals.get("🇺🇸 США", FINANCIAL_STATE["🇺🇸 США"]["recession_risk"])
+            _fb = fin_vals.get("🇮🇷 Иран", FINANCIAL_STATE["🇮🇷 Иран"]["recession_risk"])
+            leader_adj = compute_leader_adjustment(
+                _la, _lb,
+                _la.get("atrocity_score", ATROCITY_REGISTRY["🇺🇸 США"]["score"]),
+                _lb.get("atrocity_score", ATROCITY_REGISTRY["🇮🇷 Иран"]["score"]),
+                _fa, _fb,
+            )
+            adj_color = "#e74c3c" if leader_adj > 0.03 else "#26c281" if leader_adj < -0.01 else "#f39c12"
+            adj_sign  = "▲" if leader_adj > 0 else "▼"
+            st.markdown(
+                f'<div style="background:rgba(255,255,255,0.55);border-radius:12px;'
+                f'padding:.5rem .9rem;margin-top:.4rem;font-size:.85rem;">'
+                f'🧠 Поправка от профилей лидеров: '
+                f'<b style="color:{adj_color};">{adj_sign} {abs(leader_adj):.3f}</b> к ИВПН'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
         st.divider()
         col_sliders, col_result = st.columns([1, 1])
 
@@ -563,7 +747,7 @@ def render_conflict_page():
 
         factors_adj = {**factors, "military_imbalance": mil_adj}
         ivpn_base = compute_ivpn(factors)
-        ivpn      = float(np.clip(compute_ivpn(factors_adj) + tp_ivpn_bonus, 0, 1))
+        ivpn      = float(np.clip(compute_ivpn(factors_adj) + tp_ivpn_bonus + leader_adj, 0, 1))
         p    = compute_proba(ivpn)
         t    = compute_horizon(ivpn)
         rl, rl_color = risk_level(p)
