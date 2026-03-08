@@ -1,4 +1,5 @@
 {
+  "model_type": "LightGBM walk-forward OOS (no leakage)",
   "tickers": [
     "AAPL",
     "MSFT",
@@ -16,8 +17,9 @@
     "^GSPC",
     "^IXIC"
   ],
-  "n_samples": 24231,
-  "n_features": 17,
+  "n_tickers": 15,
+  "n_samples": 26944,
+  "n_features": 20,
   "feature_cols": [
     "ret1",
     "ret3",
@@ -35,49 +37,48 @@
     "dist_lo52",
     "ma50_ratio",
     "ma200_ratio",
-    "vol_rel"
+    "vol_rel",
+    "dow",
+    "month",
+    "mom_5_20"
+  ],
+  "train_period": "2017-01-01 – 2023-12-31",
+  "test_period": "2024-01-01 – 2026-03-01",
+  "targets": [
+    "target_p5_up",
+    "target_p20_up"
   ],
   "metrics": {
-    "target_r1": {
-      "mae": 0.0005,
-      "folds": [
-        0.00163,
-        0.00037,
-        0.0003,
-        0.00013,
-        6e-05
-      ]
-    },
-    "target_R20": {
-      "mae": 0.00094,
-      "folds": [
-        0.00156,
-        0.00137,
-        0.00061,
-        0.00082,
-        0.00032
-      ]
-    },
-    "target_p1_up": {
-      "roc_auc": 0.99072,
-      "folds": [
-        0.99748,
-        0.99702,
-        0.96581,
-        0.99676,
-        0.99652
-      ]
+    "target_p5_up": {
+      "roc_auc_oos": 0.4958,
+      "accuracy_oos": 0.5658,
+      "accuracy_confident_oos": 0.5712,
+      "confident_signals": 2927,
+      "total_oos_samples": 8615
     },
     "target_p20_up": {
-      "roc_auc": 0.98392,
-      "folds": [
-        0.98995,
-        0.99533,
-        0.94543,
-        0.99407,
-        0.9948
-      ]
+      "roc_auc_oos": 0.4939,
+      "accuracy_oos": 0.5889,
+      "accuracy_confident_oos": 0.5912,
+      "confident_signals": 4227,
+      "total_oos_samples": 8615
     }
   },
-  "elapsed_total": 338.0
+  "lgb_params": {
+    "objective": "binary",
+    "n_estimators": 500,
+    "learning_rate": 0.02,
+    "num_leaves": 31,
+    "max_depth": 5,
+    "min_child_samples": 60,
+    "subsample": 0.8,
+    "colsample_bytree": 0.7,
+    "reg_alpha": 0.2,
+    "reg_lambda": 2.0,
+    "random_state": 42,
+    "n_jobs": -1,
+    "verbose": -1
+  },
+  "trained_at": "2026-03-08T02:03:57.719151+00:00",
+  "note": "Walk-forward OOS. Нет leakage. p5_up=рост за 5 дней, p20_up=рост за 20 дней."
 }
