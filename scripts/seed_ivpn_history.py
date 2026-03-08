@@ -1,0 +1,201 @@
+"""
+seed_ivpn_history.py
+====================
+Заполняет data/ivpn_history.json начальными данными
+на основе ключевых событий марта 2026 (война США+Израиль vs Иран).
+Запускать один раз: python scripts/seed_ivpn_history.py
+"""
+import sys, json
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from src.ivpn_history import HISTORY_FILE, _save_history
+
+SEED = [
+    # ─── Новейшие первые ────────────────────────────────────────────────────
+    {
+        "ts": "2026-03-08T07:00:00+00:00",
+        "source": "seed",
+        "ivpn": 0.91,
+        "p_escalation": 0.831,
+        "markov_state": "🔴 Война",
+        "markov_idx": 3,
+        "factors": {
+            "military_power": 0.92, "economic_pressure": 0.89, "ideological_tension": 0.88,
+            "nuclear_risk": 0.80, "conflict_duration": 0.75, "proxy_activity": 0.85,
+            "diplomatic_failure": 0.95, "elite_cohesion": 0.70,
+            "geopolitical_shift": 0.65, "territorial_dispute": 0.72
+        },
+        "factor_deltas": {"military_power": +0.04, "diplomatic_failure": +0.05},
+        "events": [
+            {"title": "КСИР нанёс удар высокоточными ракетами по базе США в Кувейте",
+             "source": "ТАСС", "published": "2026-03-08T06:30:00+00:00",
+             "factor": "military_power", "delta": 0.04},
+            {"title": "Трамп требует «безоговорочной капитуляции» Ирана",
+             "source": "RT", "published": "2026-03-08T05:00:00+00:00",
+             "factor": "diplomatic_failure", "delta": 0.05},
+        ],
+        "note": "День 7 войны. Оба фронта наращивают интенсивность."
+    },
+    {
+        "ts": "2026-03-07T12:00:00+00:00",
+        "source": "seed",
+        "ivpn": 0.88,
+        "p_escalation": 0.793,
+        "markov_state": "🔴 Война",
+        "markov_idx": 3,
+        "factors": {
+            "military_power": 0.88, "economic_pressure": 0.87, "ideological_tension": 0.86,
+            "nuclear_risk": 0.78, "conflict_duration": 0.70, "proxy_activity": 0.82,
+            "diplomatic_failure": 0.90, "elite_cohesion": 0.65,
+            "geopolitical_shift": 0.62, "territorial_dispute": 0.70
+        },
+        "factor_deltas": {"economic_pressure": +0.06},
+        "events": [
+            {"title": "Нефть Brent превысила $90 — максимум за почти 2 года",
+             "source": "RT", "published": "2026-03-07T10:00:00+00:00",
+             "factor": "economic_pressure", "delta": 0.06},
+            {"title": "Иран: USS Abraham Lincoln отступил более чем на 1000 км",
+             "source": "ТАСС", "published": "2026-03-07T09:37:00+00:00",
+             "factor": "military_power", "delta": 0.03},
+        ],
+        "note": "Нефть $90+. Brent скачок +20% за неделю."
+    },
+    {
+        "ts": "2026-03-06T18:00:00+00:00",
+        "source": "seed",
+        "ivpn": 0.87,
+        "p_escalation": 0.778,
+        "markov_state": "🔴 Война",
+        "markov_idx": 3,
+        "factors": {
+            "military_power": 0.87, "economic_pressure": 0.83, "ideological_tension": 0.84,
+            "nuclear_risk": 0.77, "conflict_duration": 0.68, "proxy_activity": 0.80,
+            "diplomatic_failure": 0.88, "elite_cohesion": 0.60,
+            "geopolitical_shift": 0.60, "territorial_dispute": 0.68
+        },
+        "factor_deltas": {"military_power": +0.05, "elite_cohesion": -0.05},
+        "events": [
+            {"title": "США нанесли удар по иранскому дрон-носителю (ВИДЕО)",
+             "source": "RT", "published": "2026-03-06T03:57:00+00:00",
+             "factor": "military_power", "delta": 0.05},
+            {"title": "США за ударом по школе в Минабе — 168 детей (NYT vs Трамп)",
+             "source": "RT", "published": "2026-03-06T12:24:00+00:00",
+             "factor": "elite_cohesion", "delta": -0.05},
+        ],
+        "note": "День 5. Удар по школе — скандал. США атакуют иранский военный корабль."
+    },
+    {
+        "ts": "2026-03-05T10:00:00+00:00",
+        "source": "seed",
+        "ivpn": 0.86,
+        "p_escalation": 0.761,
+        "markov_state": "🔴 Война",
+        "markov_idx": 3,
+        "factors": {
+            "military_power": 0.85, "economic_pressure": 0.80, "ideological_tension": 0.83,
+            "nuclear_risk": 0.76, "conflict_duration": 0.65, "proxy_activity": 0.82,
+            "diplomatic_failure": 0.87, "elite_cohesion": 0.62,
+            "geopolitical_shift": 0.58, "territorial_dispute": 0.66
+        },
+        "factor_deltas": {"proxy_activity": +0.06, "ideological_tension": +0.04},
+        "events": [
+            {"title": "Иракские радикалы заявили о 24 атаках на базы США за сутки",
+             "source": "ТАСС", "published": "2026-03-05T05:50:00+00:00",
+             "factor": "proxy_activity", "delta": 0.06},
+            {"title": "Пезешкиан: убийство Хаменеи — объявление войны шиитам",
+             "source": "ТАСС", "published": "2026-03-05T00:00:00+00:00",
+             "factor": "ideological_tension", "delta": 0.04},
+        ],
+        "note": "День 4. Народ 4 ночи подряд выходит против США."
+    },
+    {
+        "ts": "2026-03-04T14:00:00+00:00",
+        "source": "seed",
+        "ivpn": 0.89,
+        "p_escalation": 0.807,
+        "markov_state": "🔴 Война",
+        "markov_idx": 3,
+        "factors": {
+            "military_power": 0.90, "economic_pressure": 0.78, "ideological_tension": 0.90,
+            "nuclear_risk": 0.80, "conflict_duration": 0.60, "proxy_activity": 0.78,
+            "diplomatic_failure": 0.95, "elite_cohesion": 0.55,
+            "geopolitical_shift": 0.55, "territorial_dispute": 0.65
+        },
+        "factor_deltas": {"elite_cohesion": +0.09, "military_power": +0.08, "diplomatic_failure": +0.07},
+        "events": [
+            {"title": "✝ Хаменеи убит: Израиль сбросил 100+ боеприпасов на бункер (ЦРУ выследило)",
+             "source": "ТАСС", "published": "2026-03-04T06:00:00+00:00",
+             "factor": "elite_cohesion", "delta": 0.09},
+            {"title": "КСИР закрыл Ормузский пролив — трафик танкеров −90%",
+             "source": "RT", "published": "2026-03-04T08:00:00+00:00",
+             "factor": "economic_pressure", "delta": 0.08},
+            {"title": "Израиль объявил о начале нового этапа операции в Иране",
+             "source": "ТАСС", "published": "2026-03-04T10:00:00+00:00",
+             "factor": "military_power", "delta": 0.08},
+        ],
+        "note": "🔴 ПЕРЕЛОМ: Убийство Хаменеи. Ормуз закрыт. Переход в состояние Война."
+    },
+    {
+        "ts": "2026-03-01T00:00:00+00:00",
+        "source": "seed",
+        "ivpn": 0.82,
+        "p_escalation": 0.716,
+        "markov_state": "🟠 Кризис",
+        "markov_idx": 2,
+        "factors": {
+            "military_power": 0.82, "economic_pressure": 0.72, "ideological_tension": 0.80,
+            "nuclear_risk": 0.75, "conflict_duration": 0.55, "proxy_activity": 0.75,
+            "diplomatic_failure": 0.88, "elite_cohesion": 0.48,
+            "geopolitical_shift": 0.50, "territorial_dispute": 0.60
+        },
+        "factor_deltas": {},
+        "events": [],
+        "note": "Базовая оценка на начало марта 2026. Война ещё не началась."
+    },
+    {
+        "ts": "2026-02-15T00:00:00+00:00",
+        "source": "seed",
+        "ivpn": 0.77,
+        "p_escalation": 0.646,
+        "markov_state": "🟠 Кризис",
+        "markov_idx": 2,
+        "factors": {
+            "military_power": 0.78, "economic_pressure": 0.68, "ideological_tension": 0.78,
+            "nuclear_risk": 0.74, "conflict_duration": 0.50, "proxy_activity": 0.72,
+            "diplomatic_failure": 0.82, "elite_cohesion": 0.45,
+            "geopolitical_shift": 0.45, "territorial_dispute": 0.55
+        },
+        "factor_deltas": {"nuclear_risk": +0.04},
+        "events": [
+            {"title": "Иран обогатил 85 кг урана до 60% — новый рекорд",
+             "source": "seed", "published": "2026-02-15T00:00:00+00:00",
+             "factor": "nuclear_risk", "delta": 0.04}
+        ],
+        "note": "Февраль 2026: нарастание кризиса, переговоры заморожены."
+    },
+    {
+        "ts": "2025-11-01T00:00:00+00:00",
+        "source": "seed",
+        "ivpn": 0.70,
+        "p_escalation": 0.548,
+        "markov_state": "🟡 Напряжённость",
+        "markov_idx": 1,
+        "factors": {
+            "military_power": 0.70, "economic_pressure": 0.65, "ideological_tension": 0.72,
+            "nuclear_risk": 0.68, "conflict_duration": 0.40, "proxy_activity": 0.68,
+            "diplomatic_failure": 0.75, "elite_cohesion": 0.40,
+            "geopolitical_shift": 0.40, "territorial_dispute": 0.45
+        },
+        "factor_deltas": {},
+        "events": [],
+        "note": "Q4 2025: Нетаньяху ставит цель ликвидировать Хаменеи (ноябрь 2025)."
+    },
+]
+
+if __name__ == "__main__":
+    if HISTORY_FILE.exists():
+        print(f"⚠ История уже существует: {HISTORY_FILE} — не перезаписываем.")
+        print("   Удалите файл вручную если нужна пересоздать.")
+    else:
+        _save_history(SEED)
+        print(f"✅ Создано {len(SEED)} начальных снапшотов → {HISTORY_FILE}")

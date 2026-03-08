@@ -11,12 +11,42 @@
 """
 
 import math
+import sys
+import os
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 import streamlit as st
 from datetime import datetime
+
+# ─── Модули живых новостей и истории ────────────────────
+_SRC = os.path.join(os.path.dirname(__file__), "..", "src")
+if _SRC not in sys.path:
+    sys.path.insert(0, _SRC)
+
+try:
+    from news_fetcher import fetch_news, aggregate_deltas as _aggregate_deltas
+    from ivpn_history import (
+        load_history, make_snapshot, append_snapshot,
+        should_save, build_chart_data,
+    )
+    _NEWS_AVAILABLE = True
+except Exception as _e:
+    _NEWS_AVAILABLE = False
+    _e_msg = str(_e)
+
+# Маппинг: факторы news_fetcher → ключи слайдеров страницы
+NEWS_TO_SLIDER = {
+    "military_power":      "military_imbalance",
+    "economic_pressure":   "economic_pressure",
+    "nuclear_risk":        "nuclear_factor",
+    "ideological_tension": "ideological_tension",
+    "proxy_activity":      "proxy_activity",
+    "diplomatic_failure":  "diplomatic_failure",
+    "elite_cohesion":      "elite_cohesion",
+    # "geopolitical_shift" — нет прямого слайдера
+}
 
 
 CHART_FONT = "#1f2937"
@@ -513,9 +543,21 @@ def render_conflict_page():
         "Калибровка на исторической базе 1990–2025 (SIPRI/ACLED)."
     )
 
+    # ── Авто-сид истории при первом запуске ──────────────
+    if _NEWS_AVAILABLE and len(load_history()) == 0:
+        try:
+            import importlib.util, subprocess, sys as _sys
+            seed_path = os.path.join(os.path.dirname(__file__), "..", "scripts", "seed_ivpn_history.py")
+            spec = importlib.util.spec_from_file_location("seed_h", seed_path)
+            m = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(m)
+        except Exception:
+            pass
+
     # ── Выбор конфликта ──────────────────────────────────
-    tab_iran, tab_hist, tab_compare = st.tabs([
+    tab_iran, tab_news_hist, tab_hist, tab_compare = st.tabs([
         "🇮🇷🆚🇺🇸 Иран / США",
+        "📰 Хроника ИВПН",
         "📚 Исторические конфликты",
         "📊 Сравнение",
     ])
@@ -550,6 +592,58 @@ def render_conflict_page():
                     </div>""",
                     unsafe_allow_html=True,
                 )
+
+            st.divider()
+            # ── КНОПКА ЖИВЫХ НОВОСТЕЙ ──────────────────────────────────
+            if _NEWS_AVAILABLE:
+                _btn_col, _status_col = st.columns([1, 3])
+                _fetch_clicked = _btn_col.button(
+                    "🔄 Проверить свежие новости",
+                    type="primary",
+                    help="Загружает RSS ТАСС, RT, BBC — фильтрует иранскую тему, пересчитывает факторы и сохраняет снапшот в Хронику ИВПН",
+                )
+                if _fetch_clicked:
+                    with st.spinner("Загружаю RSS ТАСС / RT / BBC…"):
+                        try:
+                            _live_events = fetch_news()
+                            _live_deltas = _aggregate_deltas(_live_events)
+                            st.session_state["_live_events"]  = _live_events
+                            st.session_state["_live_deltas"]  = _live_deltas
+                            st.session_state["_news_fetched"] = True
+                            # Обновляем значения слайдеров через session_state
+                            for _nf, _sf in NEWS_TO_SLIDER.items():
+                                _d = _live_deltas.get(_nf, 0.0)
+                                if _d and f"iran_{_sf}" in st.session_state:
+                                    st.session_state[f"iran_{_sf}"] = float(
+                                        min(1.0, max(0.0, st.session_state[f"iran_{_sf}"] + _d))
+                                    )
+                        except Exception as _ex:
+                            st.error(f"Ошибка при загрузке новостей: {_ex}")
+                            st.session_state["_news_fetched"] = False
+                        st.rerun()
+
+                # Показываем свежие события из последней загрузки
+                if st.session_state.get("_news_fetched") and st.session_state.get("_live_events"):
+                    _livev = st.session_state["_live_events"]
+                    _livev_uniq = list({e.title: e for e in _livev}.values())[:9]
+                    _status_col.success(f"Найдено {len(_livev_uniq)} иранских новостей")
+                    _nc2 = st.columns(3)
+                    for _i, _ev in enumerate(_livev_uniq):
+                        _c = "#e74c3c" if _ev.delta > 0 else "#26c281" if _ev.delta < 0 else "#95a5a6"
+                        _s = "▲" if _ev.delta > 0 else "▼" if _ev.delta < 0 else "•"
+                        _nc2[_i % 3].markdown(
+                            f"""<div style="background:rgba(255,255,255,0.55);border-radius:12px;
+                            padding:.6rem .8rem;margin-bottom:.4rem;
+                            border:1px solid rgba(255,255,255,0.65);font-size:.78rem;">
+                            <div style="color:#64748b;font-size:.70rem;">{_ev.source} · {_ev.published[:10]}</div>
+                            <div style="font-weight:600;margin:.15rem 0;line-height:1.3;">{_ev.title[:90]}</div>
+                            <div style="color:{_c};">{_s} {_ev.factor} ({'+' if _ev.delta>0 else ''}{_ev.delta:.2f})</div>
+                            </div>""",
+                            unsafe_allow_html=True,
+                        )
+            else:
+                st.caption(f"⚠️ Автообновление недоступно: {_e_msg if not _NEWS_AVAILABLE else ''}")
+
 
         st.divider()
 
@@ -766,6 +860,31 @@ def render_conflict_page():
             cfg["budget"] for cfg in tp_configs.values()
             if cfg["active"] and cfg["side"] == "B (Иран)"
         ))
+
+        # ── Автосохранение снапшота после загрузки новостей ───────────
+        if _NEWS_AVAILABLE and st.session_state.get("_news_fetched"):
+            _live_evs = st.session_state.get("_live_events", [])
+            _live_dls = st.session_state.get("_live_deltas", {})
+            _markov_idx = ivpn_to_markov_state(ivpn)
+            _snap = make_snapshot(
+                ivpn=ivpn,
+                p_escalation=p,
+                markov_state=MARKOV_STATES[_markov_idx],
+                markov_idx=_markov_idx,
+                factors=factors,
+                factor_deltas=_live_dls,
+                events=[
+                    {"title": ev.title, "url": ev.url, "source": ev.source,
+                     "published": ev.published, "factor": ev.factor, "delta": ev.delta}
+                    for ev in _live_evs[:20]
+                ],
+                source="news_update",
+                note=f"Автообновление: {len(_live_evs)} иранских событий из RSS",
+            )
+            if should_save(ivpn):
+                append_snapshot(_snap)
+            st.session_state["_news_fetched"] = False  # сброс флага
+
 
         with col_result:
             st.markdown("**Результат расчёта:**")
@@ -1160,7 +1279,65 @@ def render_conflict_page():
             )
 
     # ════════════════════════════════════════════
-    #  ТАБ 2: ИСТОРИЧЕСКИЕ КОНФЛИКТЫ
+    #  ТАБ 2: ХРОНИКА ИВПН
+    # ════════════════════════════════════════════
+    with tab_news_hist:
+        st.markdown("### 📰 Хроника ИВПН — как менялся прогноз с новостями")
+        if not _NEWS_AVAILABLE:
+            st.error(f"Модули истории недоступны. Проверьте src/ivpn_history.py и src/news_fetcher.py")
+        else:
+            _records = load_history()
+            if not _records:
+                st.info("История пуста. Нажмите «🔄 Проверить свежие новости» на вкладке 🇮🇷🆚🇺🇸 Иран / США.")
+            else:
+                _cd = build_chart_data(_records)
+                _fig_hist = go.Figure()
+                _fig_hist.add_hrect(y0=0.85, y1=1.0, fillcolor="#e74c3c", opacity=0.08,
+                                    annotation_text="Война", annotation_position="right")
+                _fig_hist.add_hrect(y0=0.64, y1=0.85, fillcolor="#e67e22", opacity=0.08,
+                                    annotation_text="Кризис", annotation_position="right")
+                _fig_hist.add_hrect(y0=0.44, y1=0.64, fillcolor="#f39c12", opacity=0.08,
+                                    annotation_text="Напряжённость", annotation_position="right")
+                _fig_hist.add_trace(go.Scatter(
+                    x=_cd["ts"],
+                    y=_cd["ivpn"],
+                    mode="lines+markers",
+                    name="ИВПН",
+                    line=dict(color="#e74c3c", width=2.5),
+                    marker=dict(
+                        size=10,
+                        color=_cd["colors"],
+                        line=dict(color="white", width=1.5),
+                    ),
+                    hovertemplate="%{customdata}<extra></extra>",
+                    customdata=_cd["hover"],
+                ))
+                apply_glass_chart_theme(
+                    _fig_hist,
+                    height=440,
+                    margin=dict(l=0, r=80, t=20, b=0),
+                    xaxis=dict(title="Дата обновления", showgrid=True),
+                    yaxis=dict(title="ИВПН", range=[0.5, 1.0], showgrid=True, tickformat=".2f"),
+                )
+                st.plotly_chart(_fig_hist, use_container_width=True)
+
+                st.markdown("**Последние обновления:**")
+                _rows_h = []
+                for _r in _records[:10]:
+                    _evs_r = _r.get("events", [])
+                    _top_ev = (_evs_r[0]["title"][:60] + "…") if _evs_r else "—"
+                    _rows_h.append({
+                        "Время (UTC)": _r["ts"][:16].replace("T", " "),
+                        "ИВПН": f"{_r['ivpn']:.3f}",
+                        "P(E)": f"{_r['p_escalation']:.1%}",
+                        "Состояние": _r["markov_state"],
+                        "Источник": _r["source"],
+                        "Ключевое событие": _top_ev,
+                    })
+                st.dataframe(pd.DataFrame(_rows_h), use_container_width=True, hide_index=True)
+
+    # ════════════════════════════════════════════
+    #  ТАБ 3: ИСТОРИЧЕСКИЕ КОНФЛИКТЫ
     # ════════════════════════════════════════════
     with tab_hist:
         st.markdown("### Исторические конфликты — верификация модели")
