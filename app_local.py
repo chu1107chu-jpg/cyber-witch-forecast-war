@@ -318,15 +318,20 @@ def build_features(df: pd.DataFrame, macro: pd.DataFrame = None) -> pd.DataFrame
     v_ma = d["Volume"].rolling(20).mean() if "Volume" in d.columns else pd.Series(1, index=d.index)
     d["vol_rel"]   = (d["Volume"] if "Volume" in d.columns else 1) / (v_ma + 1e-9)
     d["vol_spike"] = (d["vol_rel"] > 2.0).astype(float)
+    # vol_ratio = vol10/vol20 (как в обучающем скрипте)
+    d["vol_ratio"] = d["vol10"] / (d["vol20"] + 1e-9)
 
     # Momentum
     d["mom10"]      = c / (c.shift(10) + 1e-9) - 1
     d["mom20"]      = c / (c.shift(20) + 1e-9) - 1
     d["mom_cross"]  = (d["mom10"] > d["mom20"]).astype(float)
     d["ma_cross_20_50"] = (c.rolling(20).mean() > c.rolling(50).mean()).astype(float)
+    # mom_5_20 = ret5 / |ret20| (как в обучающем скрипте)
+    d["mom_5_20"]   = d["ret5"] / (d["ret20"].abs() + 1e-9)
 
     # Сезонность
-    d["day_of_week"]  = d.index.dayofweek.astype(float)
+    d["dow"]          = d.index.dayofweek.astype(float)   # как в train_lgbm.py
+    d["day_of_week"]  = d["dow"]
     d["month"]        = d.index.month.astype(float)
     d["week_of_year"] = d.index.isocalendar().week.astype(float)
 
@@ -752,8 +757,9 @@ elif page == "🔍 Тикер":
 elif page == "⚔️ Конфликты":
     try:
         import importlib, sys
+        # Безопасный reload: перезагружаем только если оба модуля уже в sys.modules
         mod_key = "pages._conflict_forecast"
-        if mod_key in sys.modules:
+        if mod_key in sys.modules and "pages" in sys.modules:
             importlib.reload(sys.modules[mod_key])
         from pages._conflict_forecast import render_conflict_page
         render_conflict_page()
