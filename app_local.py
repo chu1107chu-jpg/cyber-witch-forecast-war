@@ -34,6 +34,10 @@ TICKERS_RU = [
 ]
 TICKERS = TICKERS_US + TICKERS_RU
 
+CHART_FONT = "#1f2937"
+CHART_GRID = "rgba(15, 23, 42, 0.08)"
+CHART_LINE = "rgba(15, 23, 42, 0.12)"
+
 TICKER_LABELS = {
     # US
     "AAPL": "Apple", "MSFT": "Microsoft", "GOOGL": "Google", "AMZN": "Amazon",
@@ -66,18 +70,149 @@ st.set_page_config(
 # Глобальные стили
 st.markdown("""
 <style>
-[data-testid="stMetricValue"] { font-size: 1.5rem; font-weight: 700; }
-[data-testid="stMetricLabel"] { font-size: 0.78rem; opacity: .7; }
-.metric-up   { color: #26c281; }
-.metric-down { color: #e74c3c; }
+.stApp {
+    background:
+        radial-gradient(circle at 0% 0%, rgba(125, 211, 252, 0.35), transparent 28%),
+        radial-gradient(circle at 100% 0%, rgba(196, 181, 253, 0.28), transparent 25%),
+        linear-gradient(180deg, #f7fbff 0%, #eef4fb 52%, #e9f0f8 100%);
+    color: #18212f;
+}
+.main .block-container {
+    padding-top: 1.5rem;
+    padding-bottom: 2rem;
+}
+[data-testid="stMetricValue"] { font-size: 1.5rem; font-weight: 700; color: #162033; }
+[data-testid="stMetricLabel"] { font-size: 0.82rem; opacity: .78; color: #4b5563; }
+[data-testid="stMetricDelta"] { color: #5b6472; }
+.metric-up   { color: #0f9f6e; }
+.metric-down { color: #d14d72; }
 .section-header {
     font-size: 1.1rem; font-weight: 600;
-    border-left: 3px solid #6c63ff;
+    border-left: 3px solid rgba(99, 102, 241, 0.85);
     padding-left: .6rem; margin: 1.2rem 0 .6rem;
+    color: #18212f;
 }
-div[data-testid="stSidebar"] { background: #0e1117; }
+div[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, rgba(255,255,255,0.82), rgba(244,248,255,0.70));
+    backdrop-filter: blur(20px);
+    border-right: 1px solid rgba(255,255,255,0.55);
+}
+div[data-testid="stSidebar"] * { color: #1f2937; }
+[data-testid="stHeader"] {
+    background: rgba(255,255,255,0.35);
+    backdrop-filter: blur(14px);
+}
+[data-testid="stToolbar"] { right: 1rem; }
+[data-testid="stAppViewContainer"] {
+    background: transparent;
+}
+div[data-testid="stMetric"],
+div[data-testid="stDataFrame"],
+div[data-testid="stPlotlyChart"],
+div.stAlert,
+div[data-baseweb="select"],
+div[data-baseweb="input"],
+div[data-baseweb="base-input"],
+div.stButton > button,
+div[data-testid="stExpander"],
+div[data-testid="stTabs"] {
+    backdrop-filter: blur(18px);
+}
+div[data-testid="stMetric"],
+div[data-testid="stPlotlyChart"],
+div[data-testid="stDataFrame"] {
+    background: linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.48));
+    border: 1px solid rgba(255,255,255,0.62);
+    box-shadow: 0 12px 40px rgba(148, 163, 184, 0.16);
+    border-radius: 22px;
+    padding: .6rem .8rem;
+}
+div[data-testid="stAlert"] {
+    background: rgba(255,255,255,0.68);
+    border: 1px solid rgba(255,255,255,0.7);
+    border-radius: 18px;
+    color: #1f2937;
+}
+div[data-testid="stTabs"] button[role="tab"] {
+    background: rgba(255,255,255,0.52);
+    border: 1px solid rgba(255,255,255,0.7);
+    border-radius: 999px;
+    margin-right: .4rem;
+    color: #334155;
+}
+div[data-testid="stTabs"] button[aria-selected="true"] {
+    background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(224,231,255,0.9));
+    color: #312e81;
+}
+div[data-baseweb="select"] > div,
+div[data-baseweb="base-input"] > div,
+div[data-baseweb="input"] > div {
+    background: rgba(255,255,255,0.70);
+    border: 1px solid rgba(255,255,255,0.7);
+    border-radius: 16px;
+}
+div.stButton > button {
+    background: linear-gradient(135deg, rgba(255,255,255,0.92), rgba(224,231,255,0.88));
+    color: #1e1b4b;
+    border: 1px solid rgba(255,255,255,0.85);
+    border-radius: 14px;
+}
 </style>
 """, unsafe_allow_html=True)
+
+
+def apply_glass_chart_theme(fig, xaxis=None, yaxis=None, **extra_layout):
+    """Единый светлый glass-стиль для Plotly."""
+    xaxis = xaxis or {}
+    yaxis = yaxis or {}
+    base_axis = dict(showgrid=True, gridcolor=CHART_GRID, zerolinecolor=CHART_LINE)
+    fig.update_layout(
+        paper_bgcolor="rgba(255,255,255,0)",
+        plot_bgcolor="rgba(255,255,255,0)",
+        font=dict(color=CHART_FONT),
+        xaxis={**base_axis, **xaxis},
+        yaxis={**base_axis, **yaxis},
+        **extra_layout,
+    )
+    return fig
+
+
+def explain_probability(p: float, horizon: str) -> str:
+    pct = round(p * 100)
+    if p >= 0.7:
+        mood = "сильный шанс роста"
+    elif p >= 0.55:
+        mood = "умеренно позитивный сигнал"
+    elif p >= 0.45:
+        mood = "неопределённая ситуация"
+    elif p >= 0.3:
+        mood = "повышенный риск снижения"
+    else:
+        mood = "высокая вероятность снижения"
+    return f"Это оценка модели: примерно {pct}% шанс, что актив будет выше через {horizon}. Простыми словами — сейчас это {mood}."
+
+
+def explain_return(r: float, horizon: str) -> str:
+    pct = r * 100
+    direction = "выше" if pct >= 0 else "ниже"
+    return (
+        f"Это не гарантия, а средняя оценка модели. Она ожидает, что цена через {horizon} будет "
+        f"примерно на {abs(pct):.2f}% {direction} текущей."
+    )
+
+
+def explain_signal_count(count: int, total: int, horizon: str) -> str:
+    return (
+        f"Из {total} инструментов модель считает, что {count} с большей вероятностью покажут рост через {horizon}. "
+        f"Это быстрый индикатор общего настроения рынка."
+    )
+
+
+def explain_price(last_close: float, delta_pct: float) -> str:
+    return (
+        f"Последняя доступная цена закрытия. Сейчас актив стоит около ${last_close:,.2f}. "
+        f"За прошлую сессию цена изменилась на {delta_pct:+.2%}."
+    )
 
 
 # ─────────────────────────────────────────────
@@ -190,7 +325,7 @@ with st.sidebar:
 
     page = st.radio(
         "Раздел",
-        ["📊 Дашборд", "🔍 Тикер", "🧠 О модели"],
+        ["📊 Дашборд", "🔍 Тикер", "⚔️ Конфликты", "🧠 О модели"],
         label_visibility="collapsed",
     )
     st.divider()
@@ -270,10 +405,14 @@ if page == "📊 Дашборд":
         best = df_table.loc[df_table["p↑(t+1)"].idxmax(), "Тикер"]
         best_p = df_table["p↑(t+1)"].max()
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("📈 Растут завтра",  f"{up1} / {len(rows)}")
-        c2.metric("📈 Растут за 20д", f"{up20} / {len(rows)}")
-        c3.metric("🏆 Лучший сигнал",  f"{best}", f"{best_p:.1%} вверх")
-        c4.metric("📅 Дата прогноза",  datetime.now().strftime("%d.%m.%Y"))
+        c1.metric("📈 Растут завтра",  f"{up1} / {len(rows)}",
+              help=explain_signal_count(up1, len(rows), "1 день"))
+        c2.metric("📈 Растут за 20д", f"{up20} / {len(rows)}",
+              help=explain_signal_count(up20, len(rows), "20 дней"))
+        c3.metric("🏆 Лучший сигнал",  f"{best}", f"{best_p:.1%} вверх",
+              help=f"Это актив с самым сильным шансом роста на завтра. По оценке модели у {best} вероятность роста около {best_p:.0%}.")
+        c4.metric("📅 Дата прогноза",  datetime.now().strftime("%d.%m.%Y"),
+              help="Дата, когда сервис в последний раз пересчитал этот экран.")
         st.divider()
 
         col_l, col_r = st.columns([3, 2])
@@ -287,12 +426,11 @@ if page == "📊 Дашборд":
                 text=[f"{p:.1%}" for p in df_sorted["p↑(t+1)"]], textposition="outside",
             ))
             fig_bar.add_vline(x=0.5, line_dash="dot", line_color="white", opacity=0.4)
-            fig_bar.update_layout(
+            apply_glass_chart_theme(
+                fig_bar,
                 height=max(300, len(rows) * 28),
                 margin=dict(l=10, r=50, t=10, b=10),
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="white"),
-                xaxis=dict(tickformat=".0%", range=[0, 1], showgrid=True, gridcolor="rgba(255,255,255,0.07)"),
+                xaxis=dict(tickformat=".0%", range=[0, 1]),
                 yaxis=dict(showgrid=False), showlegend=False,
             )
             st.plotly_chart(fig_bar, use_container_width=True)
@@ -307,12 +445,11 @@ if page == "📊 Дашборд":
                 text=[f"{r:+.2%}" for r in df_r20["R²⁰ (20д)"]], textposition="outside",
             ))
             fig_r20.add_vline(x=0, line_dash="dot", line_color="white", opacity=0.4)
-            fig_r20.update_layout(
+            apply_glass_chart_theme(
+                fig_r20,
                 height=max(300, len(rows) * 28),
                 margin=dict(l=10, r=60, t=10, b=10),
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="white"),
-                xaxis=dict(tickformat="+.1%", showgrid=True, gridcolor="rgba(255,255,255,0.07)"),
+                xaxis=dict(tickformat="+.1%"),
                 yaxis=dict(showgrid=False), showlegend=False,
             )
             st.plotly_chart(fig_r20, use_container_width=True)
@@ -359,15 +496,19 @@ elif page == "🔍 Тикер":
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Цена (last close)", f"${last_close:,.2f}",
-              f"{delta_pct:+.2%} vs пред. день")
+              f"{delta_pct:+.2%} vs пред. день",
+              help=explain_price(last_close, delta_pct))
     if pred:
         c2.metric("r¹ (завтра)", f"{pred['target_r1']:+.4f}",
-                  "↑" if pred["target_r1"] > 0 else "↓")
+                  "↑" if pred["target_r1"] > 0 else "↓",
+                  help=explain_return(pred["target_r1"], "1 день"))
         c3.metric("p↑ (t+1)", f"{pred['target_p1_up']:.1%}",
-                  "бычий сигнал" if pred["target_p1_up"] > 0.5 else "медвежий")
-        c4.metric("p↑ (t+20)", f"{pred['target_p20_up']:.1%}")
+                  "бычий сигнал" if pred["target_p1_up"] > 0.5 else "медвежий",
+                  help=explain_probability(pred["target_p1_up"], "1 день"))
+        c4.metric("p↑ (t+20)", f"{pred['target_p20_up']:.1%}",
+                  help=explain_probability(pred["target_p20_up"], "20 дней"))
     else:
-        c2.metric("Прогноз", "н/д")
+        c2.metric("Прогноз", "н/д", help="По этому активу сейчас недостаточно данных для расчёта.")
 
     st.divider()
 
@@ -401,13 +542,10 @@ elif page == "🔍 Тикер":
         mode="lines", name="MA200",
         line=dict(color="#e74c3c", width=1.5, dash="dash"),
     ))
-    fig.update_layout(
+    apply_glass_chart_theme(
+        fig,
         height=380, margin=dict(l=0, r=0, t=10, b=0),
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="white"),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        xaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)"),
-        yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)"),
         hovermode="x unified",
     )
     st.plotly_chart(fig, use_container_width=True)
@@ -425,12 +563,12 @@ elif page == "🔍 Тикер":
                 x=df_plot.index, y=df_plot["Volume"],
                 marker_color=vol_colors, name="Volume",
             ))
-            fig_vol.update_layout(
+            apply_glass_chart_theme(
+                fig_vol,
                 height=220, margin=dict(l=0, r=0, t=0, b=0),
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="white"), showlegend=False,
+                showlegend=False,
                 xaxis=dict(showgrid=False),
-                yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)"),
+                yaxis=dict(showgrid=True),
             )
             st.plotly_chart(fig_vol, use_container_width=True)
         else:
@@ -456,12 +594,11 @@ elif page == "🔍 Тикер":
                                line_width=0)
             fig_rsi.add_hline(y=70, line_color="#e74c3c", line_dash="dot", opacity=0.5)
             fig_rsi.add_hline(y=30, line_color="#26c281", line_dash="dot", opacity=0.5)
-            fig_rsi.update_layout(
+            apply_glass_chart_theme(
+                fig_rsi,
                 height=220, margin=dict(l=0, r=0, t=0, b=0),
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="white"), showlegend=False,
-                yaxis=dict(range=[0, 100], showgrid=True,
-                           gridcolor="rgba(255,255,255,0.05)"),
+                showlegend=False,
+                yaxis=dict(range=[0, 100], showgrid=True),
                 xaxis=dict(showgrid=False),
             )
             st.plotly_chart(fig_rsi, use_container_width=True)
@@ -500,7 +637,7 @@ elif page == "🔍 Тикер":
             ))
             fig_gauge.update_layout(
                 height=260, margin=dict(l=20, r=20, t=40, b=20),
-                paper_bgcolor="rgba(0,0,0,0)", font=dict(color="white"),
+                paper_bgcolor="rgba(255,255,255,0)", font=dict(color=CHART_FONT),
             )
             st.plotly_chart(fig_gauge, use_container_width=True)
 
@@ -528,6 +665,23 @@ elif page == "🔍 Тикер":
 
 
 # ═══════════════════════════════════════════════
+#  СТРАНИЦА: КОНФЛИКТЫ
+# ═══════════════════════════════════════════════
+elif page == "⚔️ Конфликты":
+    try:
+        import importlib, sys
+        mod_key = "pages._conflict_forecast"
+        if mod_key in sys.modules:
+            importlib.reload(sys.modules[mod_key])
+        from pages._conflict_forecast import render_conflict_page
+        render_conflict_page()
+    except Exception as _cf_err:
+        import traceback as _tb
+        st.error(f"❌ Ошибка загрузки раздела конфликтов: {_cf_err}")
+        st.code(_tb.format_exc())
+
+
+# ═══════════════════════════════════════════════
 #  СТРАНИЦА: О МОДЕЛИ
 # ═══════════════════════════════════════════════
 elif page == "🧠 О модели":
@@ -543,13 +697,17 @@ elif page == "🧠 О модели":
     metrics = train_summary.get("metrics", {})
 
     c1.metric("target_r1 MAE",
-              f"{metrics.get('target_r1', {}).get('mae', 0):.5f}")
+              f"{metrics.get('target_r1', {}).get('mae', 0):.5f}",
+              help="Средняя ошибка прогноза на 1 день. Чем число меньше, тем ближе модель к реальному движению цены.")
     c2.metric("target_R20 MAE",
-              f"{metrics.get('target_R20', {}).get('mae', 0):.5f}")
+              f"{metrics.get('target_R20', {}).get('mae', 0):.5f}",
+              help="Средняя ошибка прогноза на 20 дней. Меньше — лучше и стабильнее.")
     c3.metric("target_p1_up ROC-AUC",
-              f"{metrics.get('target_p1_up', {}).get('roc_auc', 0):.4f}")
+              f"{metrics.get('target_p1_up', {}).get('roc_auc', 0):.4f}",
+              help="Насколько хорошо модель отделяет будущий рост от падения на горизонте 1 дня. Чем ближе к 1.0, тем надёжнее сигнал.")
     c4.metric("target_p20_up ROC-AUC",
-              f"{metrics.get('target_p20_up', {}).get('roc_auc', 0):.4f}")
+              f"{metrics.get('target_p20_up', {}).get('roc_auc', 0):.4f}",
+              help="То же самое для горизонта 20 дней. Чем выше число, тем лучше модель угадывает направление.")
 
     st.divider()
 

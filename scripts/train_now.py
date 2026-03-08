@@ -27,6 +27,10 @@ TICKERS = [
     "GC=F",   # Gold
     "^GSPC",  # S&P 500
     "^IXIC",  # NASDAQ
+    # MOEX
+    "SBER.ME", "GAZP.ME", "LKOH.ME", "NVTK.ME", "ROSN.ME",
+    "GMKN.ME", "YNDX.ME", "MGNT.ME", "MTSS.ME", "ALRS.ME",
+    "TATN.ME", "PIKK.ME", "PLZL.ME", "RTKM.ME", "VTBR.ME",
 ]
 PERIOD  = "7y"
 OUTDIR  = Path(__file__).resolve().parent.parent / "data" / "artifacts" / "sklearn"
