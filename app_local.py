@@ -325,7 +325,7 @@ with st.sidebar:
 
     page = st.radio(
         "Раздел",
-        ["📊 Дашборд", "🔍 Тикер", "⚔️ Конфликты", "🧠 О модели"],
+        ["📊 Дашборд", "🔍 Тикер", "⚔️ Конфликты"],
         label_visibility="collapsed",
     )
     st.divider()
@@ -681,96 +681,3 @@ elif page == "⚔️ Конфликты":
         st.code(_tb.format_exc())
 
 
-# ═══════════════════════════════════════════════
-#  СТРАНИЦА: О МОДЕЛИ
-# ═══════════════════════════════════════════════
-elif page == "🧠 О модели":
-    st.title("🧠 О модели")
-
-    if not models_loaded:
-        st.stop()
-
-    st.markdown('<div class="section-header">Метрики обучения</div>',
-                unsafe_allow_html=True)
-
-    c1, c2, c3, c4 = st.columns(4)
-    metrics = train_summary.get("metrics", {})
-
-    c1.metric("target_r1 MAE",
-              f"{metrics.get('target_r1', {}).get('mae', 0):.5f}",
-              help="Средняя ошибка прогноза на 1 день. Чем число меньше, тем ближе модель к реальному движению цены.")
-    c2.metric("target_R20 MAE",
-              f"{metrics.get('target_R20', {}).get('mae', 0):.5f}",
-              help="Средняя ошибка прогноза на 20 дней. Меньше — лучше и стабильнее.")
-    c3.metric("target_p1_up ROC-AUC",
-              f"{metrics.get('target_p1_up', {}).get('roc_auc', 0):.4f}",
-              help="Насколько хорошо модель отделяет будущий рост от падения на горизонте 1 дня. Чем ближе к 1.0, тем надёжнее сигнал.")
-    c4.metric("target_p20_up ROC-AUC",
-              f"{metrics.get('target_p20_up', {}).get('roc_auc', 0):.4f}",
-              help="То же самое для горизонта 20 дней. Чем выше число, тем лучше модель угадывает направление.")
-
-    st.divider()
-
-    col_a, col_b = st.columns(2)
-
-    with col_a:
-        st.markdown('<div class="section-header">Параметры обучения</div>',
-                    unsafe_allow_html=True)
-        info = {
-            "Тикеров": train_summary.get("n_tickers", 15),
-            "Сэмплов": f"{train_summary.get('n_samples', 0):,}",
-            "Признаков": train_summary.get("n_features", 17),
-            "Период": "7 лет (yfinance)",
-            "Кросс-валидация": "TimeSeriesSplit(5 folds)",
-            "Дата обучения": train_summary.get("trained_at", "—")[:10],
-        }
-        for k, v in info.items():
-            st.markdown(f"**{k}:** {v}")
-
-    with col_b:
-        st.markdown('<div class="section-header">Архитектура</div>',
-                    unsafe_allow_html=True)
-        st.markdown("""
-**Регрессия** (`target_r1`, `target_R20`):
-```
-StackingRegressor(
-  estimators=[
-    Ridge(α=1.0),
-    ElasticNet(),
-    RandomForestRegressor(n=200),
-    ExtraTreesRegressor(n=200),
-  ],
-  final_estimator=Ridge()
-)
-```
-
-**Классификация** (`target_p1_up`, `target_p20_up`):
-```
-Pipeline(
-  StandardScaler(),
-  LogisticRegression(C=0.1)
-)
-```
-""")
-
-    st.divider()
-    st.markdown('<div class="section-header">Признаки (17)</div>',
-                unsafe_allow_html=True)
-    feat_desc = {
-        "ret1/3/5/10/20": "Скользящие доходности за N дней",
-        "log_ret1": "Логарифмическая доходность (1 день)",
-        "rsi14": "RSI-14",
-        "macd_h": "MACD гистограмма",
-        "atr14": "ATR-14 / цена",
-        "vol10 / vol20": "Историческая волатильность (10d, 20d)",
-        "vol_ratio": "vol10 / vol20",
-        "dist_hi52 / dist_lo52": "Расстояние до 52-нед. хай/лоу",
-        "ma50_ratio / ma200_ratio": "Цена / MA50, цена / MA200",
-        "vol_rel": "Объём / MA(объём, 20)",
-    }
-    for feat, desc in feat_desc.items():
-        st.markdown(f"- **`{feat}`** — {desc}")
-
-    st.divider()
-    with st.expander("Полный train_summary.json"):
-        st.json(train_summary)
