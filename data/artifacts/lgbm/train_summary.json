@@ -1,0 +1,98 @@
+{
+  "trained_at": "2026-03-08T01:51:06.090017",
+  "train_period": "2016-01-01 → 2023-12-31",
+  "oos_period": "2024-01-01 → 2026-03-01",
+  "n_samples": 31317,
+  "n_features": 39,
+  "feature_cols": [
+    "ret1",
+    "ret2",
+    "ret3",
+    "ret5",
+    "ret10",
+    "ret20",
+    "log_ret1",
+    "rsi14",
+    "macd_h",
+    "macd_sign",
+    "atr14",
+    "bb_pos",
+    "bb_width",
+    "vol5",
+    "vol10",
+    "vol20",
+    "vol_ratio",
+    "ma10_ratio",
+    "ma20_ratio",
+    "ma50_ratio",
+    "ma200_ratio",
+    "dist_hi52",
+    "dist_lo52",
+    "hl52_range",
+    "vol_rel",
+    "vol_spike",
+    "mom10",
+    "mom20",
+    "mom_cross",
+    "ma_cross_20_50",
+    "day_of_week",
+    "month",
+    "week_of_year",
+    "vix_z",
+    "vix_ret",
+    "tnx_z",
+    "tnx_ret",
+    "dxy_z",
+    "dxy_ret"
+  ],
+  "tickers": [
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "AMZN",
+    "NVDA",
+    "META",
+    "TSLA",
+    "BRK-B",
+    "XOM",
+    "JPM",
+    "BTC-USD",
+    "ETH-USD",
+    "GC=F",
+    "^GSPC",
+    "^IXIC"
+  ],
+  "targets": [
+    "p5_up",
+    "p20_up"
+  ],
+  "elapsed_sec": 14,
+  "metrics": {
+    "target_p5_up": {
+      "cv_auc": 0.519921844433211,
+      "cv_acc_55": 0.5694462460770642,
+      "cv_folds": [
+        0.5188743244317611,
+        0.4892933476108767,
+        0.5132042056001568,
+        0.558315500090049
+      ],
+      "oos_auc": 0.5069384847589564,
+      "oos_acc_55": 0.5334114888628371,
+      "oos_coverage": 0.7178120617110799
+    },
+    "target_p20_up": {
+      "cv_auc": 0.5473720058214304,
+      "cv_acc_55": 0.5952556403386741,
+      "cv_folds": [
+        0.5510763767021545,
+        0.5318498779047092,
+        0.5496046836077763,
+        0.5569570850710821
+      ],
+      "oos_auc": 0.5136847344253024,
+      "oos_acc_55": 0.5647972389991371,
+      "oos_coverage": 0.8127629733520336
+    }
+  }
+}
