@@ -384,7 +384,7 @@ with st.sidebar:
 
     page = st.radio(
         "Раздел",
-        ["📊 Дашборд", "🔍 Тикер", "⚔️ Конфликты"],
+        ["📊 Дашборд", "🔍 Тикер", "⚔️ Конфликты", "💝 Донат"],
         label_visibility="collapsed",
     )
     st.divider()
@@ -767,5 +767,12 @@ elif page == "⚔️ Конфликты":
         import traceback as _tb
         st.error(f"❌ Ошибка загрузки раздела конфликтов: {_cf_err}")
         st.code(_tb.format_exc())
-
+elif page == "💝 Донат":
+    try:
+        from pages._donate import render_donate_page
+        render_donate_page()
+    except Exception as _don_err:
+        import traceback as _tb
+        st.error(f"❌ Ошибка загрузки страницы доната: {_don_err}")
+        st.code(_tb.format_exc())
 
