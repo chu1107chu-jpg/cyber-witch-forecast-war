@@ -603,20 +603,23 @@ def render_conflict_page():
                     help="Загружает RSS ТАСС, RT, BBC — фильтрует иранскую тему и пересчитывает уровень напряжённости по свежим событиям",
                 )
                 if _fetch_clicked:
-                    with st.spinner("Загружаю RSS ТАСС / RT / BBC…"):
+                    with st.spinner("Загружаю RSS ТАСС / RT / BBC / Al Jazeera / IRNA / Reuters…"):
                         try:
                             _live_events = fetch_news()
-                            _live_deltas = _aggregate_deltas(_live_events)
+                            _live_deltas = _aggregate_deltas(_live_events)  # храним для UI
                             st.session_state["_live_events"]  = _live_events
                             st.session_state["_live_deltas"]  = _live_deltas
                             st.session_state["_news_fetched"] = True
-                            # Обновляем значения слайдеров через session_state
+                            # Байесовское обновление слайдеров
+                            # (prior = текущие значения слайдеров)
+                            _prior_ba = {
+                                _nf: st.session_state.get(f"iran_{_sf}", 0.5)
+                                for _nf, _sf in NEWS_TO_SLIDER.items()
+                            }
+                            _posterior_ba = _bayesian_update(_prior_ba, _live_events)
                             for _nf, _sf in NEWS_TO_SLIDER.items():
-                                _d = _live_deltas.get(_nf, 0.0)
-                                if _d and f"iran_{_sf}" in st.session_state:
-                                    st.session_state[f"iran_{_sf}"] = float(
-                                        min(1.0, max(0.0, st.session_state[f"iran_{_sf}"] + _d))
-                                    )
+                                if _nf in _posterior_ba:
+                                    st.session_state[f"iran_{_sf}"] = float(_posterior_ba[_nf])
                         except Exception as _ex:
                             st.error(f"Ошибка при загрузке новостей: {_ex}")
                             st.session_state["_news_fetched"] = False
@@ -885,6 +888,30 @@ def render_conflict_page():
                 append_snapshot(_snap)
             st.session_state["_news_fetched"] = False  # сброс флага
 
+        # ── Монте-Карло доверительный интервал ──────────────────────
+        _ci = run_monte_carlo(
+            factors=factors_adj,
+            compute_ivpn_fn=compute_ivpn,
+            compute_proba_fn=compute_proba,
+            leader_adj=leader_adj,
+            bonus=tp_ivpn_bonus,
+        )
+
+        # ── MLP-прогноз траектории (LSTM/MLP) ──────────────────────
+        _hist_vals = [r["ivpn"] for r in load_history()[:6]] if _NEWS_AVAILABLE else []
+        _lf = predict_trajectory(
+            current_ivpn=ivpn,
+            history_ivpn=_hist_vals,
+            leader_a=_la,
+            leader_b=_lb,
+            atrocity_a=_la.get("atrocity_score", ATROCITY_REGISTRY["🇺🇸 США"]["score"]),
+            atrocity_b=_lb.get("atrocity_score", ATROCITY_REGISTRY["🇮🇷 Иран"]["score"]),
+            recession_a=_fa if isinstance(_fa, float) else FINANCIAL_STATE["🇺🇸 США"]["recession_risk"],
+            recession_b=_fb if isinstance(_fb, float) else FINANCIAL_STATE["🇮🇷 Иран"]["recession_risk"],
+            debt_gdp_a=FINANCIAL_STATE["🇺🇸 США"]["debt_gdp"],
+            debt_gdp_b=FINANCIAL_STATE["🇮🇷 Иран"]["debt_gdp"],
+        )
+
 
         with col_result:
             st.markdown("**Результат расчёта:**")
@@ -927,9 +954,70 @@ def render_conflict_page():
             )
 
             c1, c2, c3 = st.columns(3)
-            c1.metric("Уровень напряжённости", f"{ivpn:.3f}", help="Сводная оценка напряжённости. Чем выше число, тем ближе ситуация к опасной черте.")
+            c1.metric("Уровень напряжённости", f"{ivpn:.3f}",
+                      help=f"Сводная оценка напряжённости. Чем выше число, тем ближе ситуация к опасной черте.\n90% CI: {_ci.format_ivpn()}")
             c2.metric("Горизонт",    f"{t:.0f} мес.", help=explain_horizon(t))
             c3.metric("ΔΦ (силы)",   f"{delta_phi:.0f}:1", help=explain_force_ratio(delta_phi))
+
+            # ── Доверительный интервал (Montecarlo) ──────────────────────
+            st.markdown(
+                f"""<div style="background:rgba(255,255,255,0.45);border-radius:12px;
+                padding:.6rem 1rem;margin-bottom:.6rem;font-size:.82rem;
+                border:1px solid rgba(255,255,255,0.65);">
+                <b>🎲 Доверительный интервал (Monte Carlo, n=500)</b><br>
+                <span style="color:#64748b;">
+                P(эскалация): <b>{_ci.format_pe()}</b> &nbsp;·&nbsp;
+                Напряжённость: <b>{_ci.format_ivpn()}</b>
+                </span></div>""",
+                unsafe_allow_html=True,
+            )
+
+            # ── MLP-прогноз ──────────────────────────────────────────────────
+            st.markdown(
+                f"""<div style="background:rgba(255,255,255,0.45);border-radius:12px;
+                padding:.6rem 1rem;margin-bottom:.6rem;
+                border:1px solid rgba(255,255,255,0.65);">
+                {format_trajectory_html(_lf, ivpn)}
+                </div>""",
+                unsafe_allow_html=True,
+            )
+
+            # ── Рыночные сигналы ───────────────────────────────────────────────
+            if _market is not None and (
+                _market.brent_usd is not None
+                or _market.polymarket_p_conflict is not None
+                or _market.metaculus_community_p is not None
+            ):
+                _mkt_parts = []
+                if _market.brent_usd is not None:
+                    _mkt_parts.append(f"° Brent: {format_brent(_market)}")
+                if _market.lng_usd is not None:
+                    _mkt_parts.append(f"° LNG: {format_lng(_market)}")
+                if _market.polymarket_p_conflict is not None:
+                    _pm_url = _market.polymarket_url or "https://polymarket.com"
+                    _mkt_parts.append(
+                        f"° <a href='{_pm_url}' target='_blank' style='text-decoration:none;color:inherit;'>"
+                        f"Polymarket ↗</a>: {format_polymarket(_market)}"
+                    )
+                if _market.metaculus_community_p is not None:
+                    _mc_url = _market.metaculus_url or "https://metaculus.com"
+                    _mkt_parts.append(
+                        f"° <a href='{_mc_url}' target='_blank' style='text-decoration:none;color:inherit;'>"
+                        f"Metaculus ↗</a>: {format_metaculus(_market)}"
+                    )
+                st.markdown(
+                    f"""<div style="background:rgba(255,255,255,0.45);border-radius:12px;
+                    padding:.6rem 1rem;margin-bottom:.6rem;font-size:.82rem;
+                    border:1px solid rgba(255,255,255,0.65);">
+                    <b>📈 Рыночные сигналы</b>&nbsp;<span style='color:#64748b;font-size:.75rem;'>(кэш 30 мин)</span><br>
+                    <span style='color:#64748b;'>{'  &nbsp; '.join(_mkt_parts)}</span>
+                    </div>""",
+                    unsafe_allow_html=True,
+                )
+                # Предупреждение при принципиальном расхождении
+                _cal_note = market_calibration_note(_market, p)
+                if _cal_note:
+                    st.warning(_cal_note)
 
             # Предупреждение о ядерном факторе
             if factors["nuclear_factor"] > 0.75:

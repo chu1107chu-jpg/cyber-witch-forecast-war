@@ -1,8 +1,8 @@
 """
 news_fetcher.py
 ===============
-Получает свежие новости из RSS-лент ТАСС и RT,
-фильтрует по иранской тематике, вычисляет δ-факторы ИВПН.
+Получает свежие новости из 7 RSS-источников: ТАСС, RT, BBC, Al Jazeera, IRNA, Reuters, Times of Israel.
+Фильтрует по иранской тематике, вычисляет δ-факторы с учётом достоверности источника (байесовское обновление).
 
 Результат: список NewsEvent, готовых к записи в историю.
 """
@@ -19,9 +19,31 @@ import feedparser
 #  RSS-источники
 # ──────────────────────────────────────────────
 RSS_FEEDS = {
-    "ТАСС":   "https://tass.ru/rss/v2.xml",
-    "RT":     "https://www.rt.com/rss/news/",
-    "BBC":    "https://feeds.bbci.co.uk/news/world/rss.xml",
+    # Российский угол зрения
+    "ТАСС":          "https://tass.ru/rss/v2.xml",
+    "RT":            "https://www.rt.com/rss/news/",
+    # Западный угол зрения
+    "BBC":           "https://feeds.bbci.co.uk/news/world/rss.xml",
+    "Reuters":       "https://feeds.reuters.com/reuters/worldnews",
+    # Арабский / региональный угол зрения
+    "AlJazeera":     "https://www.aljazeera.com/xml/rss/all.xml",
+    # Иранское госагентство
+    "IRNA":          "https://en.irna.ir/rss",
+    # Израильский угол зрения
+    "TimesOfIsrael": "https://www.timesofisrael.com/feed/",
+}
+
+# Доверие к источнику: меньше σ → больше вес при байесовском обновлении
+# Reuters/AP = нейтральные, низкая неопределённость
+SOURCE_SIGMA: dict[str, float] = {
+    "Reuters":       0.12,   # высокая точность, нейтральный
+    "BBC":           0.16,   # надёжный, западный угол
+    "AlJazeera":     0.18,   # региональный, независимый
+    "TimesOfIsrael": 0.20,   # израильский национальный угол
+    "ТАСС":          0.24,   # российское госагентство
+    "IRNA":          0.24,   # иранское госагентство
+    "RT":            0.26,   # госСМИ с редакционной позицией
+    "default":       0.22,
 }
 
 # ──────────────────────────────────────────────
@@ -209,3 +231,54 @@ def aggregate_deltas(events: list[NewsEvent]) -> dict[str, float]:
             totals[ev.factor] = totals.get(ev.factor, 0.0) + ev.delta
     # Ограничиваем сильные сигналы
     return {f: max(-0.30, min(0.30, d)) for f, d in totals.items()}
+
+
+def bayesian_update(
+    prior_factors: dict[str, float],
+    events: list[NewsEvent],
+    prior_sigma: float = 0.12,
+) -> dict[str, float]:
+    """
+    Байесовское обновление факторов на основе новостных событий.
+
+    Модель: каждый фактор x имеет Гауссов prior (x_0, σ_prior).
+    Каждое событие — наблюдение (x_0 + δ, σ_source).
+    Posterior: MAP оценка с взвешиванием по точности источника.
+
+    Формула (Гауссов байес): 
+      posterior_mean = (μ0/σ²₀ + Сум(данные_i/σ²_i)) / (1/σ²₀ + Сум(1/σ²_i))
+
+    Args:
+        prior_factors: текущие значения слайдеров (prior_mean)
+        events:        список NewsEvent
+        prior_sigma:   неопределённость приора (по умолчанию 0.12)
+
+    Returns:
+        обновлённые значения факторов {factor: posterior_value}
+    """
+    # Собираем наблюдения по факторам
+    observations: dict[str, list[tuple[float, float]]] = {}  # factor -> [(x_obs, sigma)]
+    for ev in events:
+        if not ev.factor or ev.delta == 0.0:
+            continue
+        sigma_src = SOURCE_SIGMA.get(ev.source, SOURCE_SIGMA["default"])
+        x_obs = prior_factors.get(ev.factor, 0.5) + ev.delta  # x_0 + δ
+        x_obs = max(0.0, min(1.0, x_obs))
+        observations.setdefault(ev.factor, []).append((x_obs, sigma_src))
+
+    updated = dict(prior_factors)  # начинаем с приором
+    prior_precision = 1.0 / (prior_sigma ** 2)
+
+    for factor, obs_list in observations.items():
+        prior_mean = prior_factors.get(factor, 0.5)
+        # Суммарная статистика по всем наблюдениям
+        sum_prec = prior_precision
+        sum_prec_x = prior_mean * prior_precision
+        for x_obs, sigma_src in obs_list:
+            prec = 1.0 / (sigma_src ** 2)
+            sum_prec   += prec
+            sum_prec_x += x_obs * prec
+        posterior_mean = sum_prec_x / sum_prec
+        updated[factor] = float(max(0.0, min(1.0, posterior_mean)))
+
+    return updated
