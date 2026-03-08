@@ -1,0 +1,25 @@
+app:
+  env: development
+  base_url: "${BASE_URL}"
+  secret_key: "${SECRET_KEY}"
+  jwt_ttl: 3600
+  jwt_refresh_ttl: 604800
+
+flags:
+  web3_enable: false
+  streamlit_mode: true
+  yolo_moderation: true
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 1
+
+rate_limit:
+  global_rpm: 600
+  predict_rpm: 60
+  wallet_rpm: 30
+
+logging:
+  level: INFO
+  format: json

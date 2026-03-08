@@ -1,0 +1,83 @@
+{
+  "tickers": [
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "AMZN",
+    "NVDA",
+    "META",
+    "TSLA",
+    "BRK-B",
+    "XOM",
+    "JPM",
+    "BTC-USD",
+    "ETH-USD",
+    "GC=F",
+    "^GSPC",
+    "^IXIC"
+  ],
+  "n_samples": 24231,
+  "n_features": 17,
+  "feature_cols": [
+    "ret1",
+    "ret3",
+    "ret5",
+    "ret10",
+    "ret20",
+    "log_ret1",
+    "rsi14",
+    "macd_h",
+    "atr14",
+    "vol10",
+    "vol20",
+    "vol_ratio",
+    "dist_hi52",
+    "dist_lo52",
+    "ma50_ratio",
+    "ma200_ratio",
+    "vol_rel"
+  ],
+  "metrics": {
+    "target_r1": {
+      "mae": 0.0005,
+      "folds": [
+        0.00163,
+        0.00037,
+        0.0003,
+        0.00013,
+        6e-05
+      ]
+    },
+    "target_R20": {
+      "mae": 0.00094,
+      "folds": [
+        0.00156,
+        0.00137,
+        0.00061,
+        0.00082,
+        0.00032
+      ]
+    },
+    "target_p1_up": {
+      "roc_auc": 0.99072,
+      "folds": [
+        0.99748,
+        0.99702,
+        0.96581,
+        0.99676,
+        0.99652
+      ]
+    },
+    "target_p20_up": {
+      "roc_auc": 0.98392,
+      "folds": [
+        0.98995,
+        0.99533,
+        0.94543,
+        0.99407,
+        0.9948
+      ]
+    }
+  },
+  "elapsed_total": 338.0
+}

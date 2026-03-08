@@ -1,0 +1,71 @@
+languages:
+  - en
+  - ru
+
+quota_per_run: 500          # min articles per nightly ETL
+
+apis:
+  newsapi:
+    enabled: true
+    base_url: "https://newsapi.org/v2"
+    page_size: 100
+    delay_sec: 1.5
+  alpha_vantage:
+    enabled: true
+    base_url: "https://www.alphavantage.co/query"
+    function: NEWS_SENTIMENT
+    delay_sec: 12           # free tier: 5 req/min
+  marketaux:
+    enabled: true
+    base_url: "https://api.marketaux.com/v1/news/all"
+    delay_sec: 2
+  newsdata:
+    enabled: false          # enable when key available
+    base_url: "https://newsdata.io/api/1/news"
+    delay_sec: 2
+  gdelt:
+    enabled: true
+    base_url: "https://api.gdeltproject.org/api/v2/doc/doc"
+
+rss:
+  feeds:
+    # International
+    - name: Reuters Business
+      url: "https://feeds.reuters.com/reuters/businessNews"
+      lang: en
+    - name: Bloomberg Markets
+      url: "https://feeds.bloomberg.com/markets/news.rss"
+      lang: en
+    - name: Forbes Markets
+      url: "https://www.forbes.com/markets/feed/"
+      lang: en
+    - name: CoinDesk
+      url: "https://www.coindesk.com/arc/outboundfeeds/rss/"
+      lang: en
+    - name: Decrypt
+      url: "https://decrypt.co/feed"
+      lang: en
+    - name: CoinTelegraph
+      url: "https://cointelegraph.com/rss"
+      lang: en
+    # СНГ
+    - name: РБК
+      url: "https://rss.rbc.ru/archive/main/20/rss.rss"
+      lang: ru
+    - name: Интерфакс
+      url: "https://www.interfax.ru/rss.asp"
+      lang: ru
+    - name: Коммерсант
+      url: "https://www.kommersant.ru/RSS/main.xml"
+      lang: ru
+    - name: ТАСС
+      url: "https://tass.ru/rss/v2.xml"
+      lang: ru
+
+dedup:
+  window_hours: 48
+  sim_threshold: 0.85       # косиносное сходство для дедупа
+
+cache:
+  ttl_hours: 6
+  max_articles_per_run: 2000

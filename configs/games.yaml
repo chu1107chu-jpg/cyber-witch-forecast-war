@@ -1,0 +1,62 @@
+game_id: "utility_slot_v1"
+asof: "2025-01-01"
+payouts:
+  JACKPOT: { p: 0.005, r: 10.0 }
+  BIG:     { p: 0.015, r: 5.0 }
+  MEDIUM:  { p: 0.03,  r: 2.0 }
+  SMALL:   { p: 0.10,  r: 1.0 }
+  MINOR:   { p: 0.20,  r: 0.5 }
+  BONUS:   { p: 0.25,  r: 0.2, rewards: ["freespin", "badge", "feature_24h"] }
+  NONE:    { p: 0.40,  r: 0.0 }
+limits:
+  max_payout_x: 10.0
+  min_bet: 10
+  max_bet: 1000
+  cooldown_sec: 3
+rtp:
+  target: 0.43
+  rolling_window: 1000
+  adjust_step: 0.0025
+  lower_high: ["JACKPOT", "BIG"]
+  raise_low:  ["MINOR", "BONUS"]
+  max_allowed: 0.48
+  min_allowed: 0.38
+fairness:
+  period: "1d"
+  reveal_server_seed: true
+---
+game_id: "snake_v1"
+asof: "2025-01-01"
+payouts:
+  GOLD:    { p: 0.005, r: 10.0 }
+  PURPLE:  { p: 0.015, r: 5.0 }
+  BLUE:    { p: 0.03,  r: 2.0 }
+  GREEN:   { p: 0.10,  r: 1.0 }
+  YELLOW:  { p: 0.20,  r: 0.5 }
+  RED:     { p: 0.25,  r: 0.2, rewards: ["freespin", "badge", "feature_24h"] }
+  GRAY:    { p: 0.40,  r: 0.0 }
+difficulty:
+  round_duration_sec: 45
+  basket_width_pct: 12
+  fall_speed_base: 180
+  fall_speed_jitter: 60
+  spawn_rate_per_sec: 1.0
+  spawn_jitter: 0.5
+  assist_newcomer: true
+limits:
+  max_payout_x: 10.0
+  min_bet: 10
+  max_bet: 1000
+  cooldown_sec: 5
+  max_rounds_per_hour: 30
+rtp:
+  target: 0.43
+  rolling_window_rounds: 500
+  adjust_step: 0.003
+  raise_low: ["RED", "YELLOW"]
+  lower_high: ["PURPLE", "GOLD"]
+  max_allowed: 0.48
+  min_allowed: 0.38
+fairness:
+  period: "1d"
+  provably_fair: true
