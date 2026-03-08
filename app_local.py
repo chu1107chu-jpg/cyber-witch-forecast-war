@@ -98,7 +98,7 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     # MACD histogram
     ema12 = d["Close"].ewm(span=12).mean()
     ema26 = d["Close"].ewm(span=26).mean()
-    d["macd_hist"] = ema12 - ema26 - (ema12 - ema26).ewm(span=9).mean()
+    d["macd_h"] = ema12 - ema26 - (ema12 - ema26).ewm(span=9).mean()
 
     # ATR-14
     hl = d["High"] - d["Low"]
@@ -106,7 +106,7 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     lc = (d["Low"] - d["Close"].shift()).abs()
     tr = pd.concat([hl, hc, lc], axis=1).max(axis=1)
     atr14 = tr.rolling(14).mean()
-    d["atr14_pct"] = atr14 / d["Close"]
+    d["atr14"] = atr14 / d["Close"]
 
     # Volatility
     d["vol10"] = d["log_ret1"].rolling(10).std()
@@ -148,7 +148,14 @@ def predict_ticker(ticker: str, models, feature_cols):
     X_last = df[feature_cols].iloc[[-1]]
     result = {}
     for target, pipe in models.items():
-        val = pipe.predict(X_last)[0]
+        if "up" in target:
+            # Классификация → вероятность класса 1
+            try:
+                val = pipe.predict_proba(X_last)[0][1]
+            except AttributeError:
+                val = float(pipe.predict(X_last)[0])
+        else:
+            val = float(pipe.predict(X_last)[0])
         result[target] = float(val)
 
     return result, df_raw
@@ -587,8 +594,8 @@ Pipeline(
         "ret1/3/5/10/20": "Скользящие доходности за N дней",
         "log_ret1": "Логарифмическая доходность (1 день)",
         "rsi14": "RSI-14",
-        "macd_hist": "MACD гистограмма",
-        "atr14_pct": "ATR-14 / цена",
+        "macd_h": "MACD гистограмма",
+        "atr14": "ATR-14 / цена",
         "vol10 / vol20": "Историческая волатильность (10d, 20d)",
         "vol_ratio": "vol10 / vol20",
         "dist_hi52 / dist_lo52": "Расстояние до 52-нед. хай/лоу",
