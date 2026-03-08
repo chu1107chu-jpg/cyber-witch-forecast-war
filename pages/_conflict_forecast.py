@@ -557,7 +557,7 @@ def render_conflict_page():
     # ── Выбор конфликта ──────────────────────────────────
     tab_iran, tab_news_hist, tab_hist, tab_compare = st.tabs([
         "🇮🇷🆚🇺🇸 Иран / США",
-        "📰 Хроника ИВПН",
+        "📰 История прогнозов",
         "📚 Исторические конфликты",
         "📊 Сравнение",
     ])
@@ -598,9 +598,9 @@ def render_conflict_page():
             if _NEWS_AVAILABLE:
                 _btn_col, _status_col = st.columns([1, 3])
                 _fetch_clicked = _btn_col.button(
-                    "🔄 Проверить свежие новости",
+                    "� Анализ новых новостей",
                     type="primary",
-                    help="Загружает RSS ТАСС, RT, BBC — фильтрует иранскую тему, пересчитывает факторы и сохраняет снапшот в Хронику ИВПН",
+                    help="Загружает RSS ТАСС, RT, BBC — фильтрует иранскую тему и пересчитывает уровень напряжённости по свежим событиям",
                 )
                 if _fetch_clicked:
                     with st.spinner("Загружаю RSS ТАСС / RT / BBC…"):
@@ -710,7 +710,7 @@ def render_conflict_page():
         leader_adj = 0.0
         with st.expander("🧠 Профили лидеров, злодеяния и финансовое давление", expanded=False):
             st.caption(
-                "Возраст, агрессивность, рейтинг, злодеяния и финансы модифицируют ИВПН на -0.10 … +0.15."
+                "Возраст, агрессивность, рейтинг, злодеяния и финансы изменяют уровень напряжённости на -0.10 … +0.15."
             )
 
             col_la, col_lb = st.columns(2)
@@ -789,7 +789,7 @@ def render_conflict_page():
                 f'<div style="background:rgba(255,255,255,0.55);border-radius:12px;'
                 f'padding:.5rem .9rem;margin-top:.4rem;font-size:.85rem;">'
                 f'🧠 Поправка от профилей лидеров: '
-                f'<b style="color:{adj_color};">{adj_sign} {abs(leader_adj):.3f}</b> к ИВПН'
+                f'<b style="color:{adj_color};">{adj_sign} {abs(leader_adj):.3f}</b> к уровню напряжённости'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -839,11 +839,11 @@ def render_conflict_page():
             if cfg["side"] == "A (США)":
                 mil_adj = float(np.clip(mil_adj + 0.05 * (cfg["budget"] / ir_mil) / 200, 0, 1))
                 tp_ivpn_bonus += contribution
-                tp_summary_lines.append(f"**{country}** → усиливает США (+{contribution:.3f} к ИВПН)")
+                tp_summary_lines.append(f"**{country}** → усиливает США (+{contribution:.3f} к напряжённости)")
             elif cfg["side"] == "B (Иран)":
                 mil_adj = float(np.clip(mil_adj - 0.05 * (cfg["budget"] / us_mil), 0, 1))
                 tp_ivpn_bonus -= contribution * 0.5  # поддержка Ирана сдерживает эскалацию
-                tp_summary_lines.append(f"**{country}** → усиливает Иран ({contribution:.3f} к ИВПН сдержан)")
+                tp_summary_lines.append(f"**{country}** → усиливает Иран ({contribution:.3f} — напряжённость сдержана)")
             else:
                 tp_summary_lines.append(f"**{country}** → нейтрал (влияния нет)")
 
@@ -927,7 +927,7 @@ def render_conflict_page():
             )
 
             c1, c2, c3 = st.columns(3)
-            c1.metric("ИВПН",        f"{ivpn:.3f}", help="Сводная оценка напряжённости. Чем выше число, тем ближе ситуация к опасной черте.")
+            c1.metric("Уровень напряжённости", f"{ivpn:.3f}", help="Сводная оценка напряжённости. Чем выше число, тем ближе ситуация к опасной черте.")
             c2.metric("Горизонт",    f"{t:.0f} мес.", help=explain_horizon(t))
             c3.metric("ΔΦ (силы)",   f"{delta_phi:.0f}:1", help=explain_force_ratio(delta_phi))
 
@@ -1011,7 +1011,7 @@ def render_conflict_page():
             st.plotly_chart(fig_g, use_container_width=True)
 
         # ── Логистическая кривая + текущая точка ──
-        st.markdown('<div class="section-header">Логистическая кривая P(E) = f(ИВПН)</div>',
+        st.markdown('<div class="section-header">Логистическая кривая P(E) = f(уровень напряжённости)</div>',
                     unsafe_allow_html=True)
         x_range = np.linspace(0, 1, 300)
         y_range = [compute_proba(x) for x in x_range]
@@ -1045,7 +1045,7 @@ def render_conflict_page():
         apply_glass_chart_theme(
             fig_logit,
             height=380, margin=dict(l=0, r=0, t=10, b=0),
-            xaxis=dict(title="ИВПН"),
+            xaxis=dict(title="Уровень напряжённости"),
             yaxis=dict(title="P(эскалация)", tickformat=".0%", range=[0, 1.05]),
             legend=dict(orientation="h", y=1.12),
         )
@@ -1087,7 +1087,7 @@ def render_conflict_page():
             sc_rows.append({
                 "Сценарий": sc_name,
                 "Описание": sc_data["desc"],
-                "ИВПН": round(sc_ivpn, 3),
+                "Ур. напряжённости": round(sc_ivpn, 3),
                 "P(E)": f"{sc_p:.1%}",
                 "Горизонт (мес.)": f"{sc_t:.0f}",
                 "Уровень риска": sc_rl,
@@ -1138,7 +1138,7 @@ def render_conflict_page():
                 range(len(MARKOV_STATES)),
                 index=min(suggested_s, len(MARKOV_STATES) - 1),
                 format_func=lambda i: (
-                    f"{MARKOV_STATES[i]}  ← рекомендовано по ИВПН"
+                    f"{MARKOV_STATES[i]}  ← рекомендовано по уровню напряжённости"
                     if i == suggested_s else MARKOV_STATES[i]
                 ),
                 key="markov_state_select",
@@ -1264,7 +1264,7 @@ def render_conflict_page():
              "better_diplomatic_failure чем текущий слайдер."),
             ("🏛️ Path dependency (история эскалаций)",
              "Сколько раз за последние 5 лет ситуация поднималась до 'Кризиса'. "
-             "Страна с 3 предыдущими эскалациями имеет выше P(война) при том же ИВПН. "
+             "Страна с 3 предыдущими эскалациями имеет выше P(война) при том же уровне напряжённости. "
              "Текущая модель этого НЕ учитывает — Марков частично решает через состояния."),
         ]
         for title, desc in improvements:
@@ -1282,13 +1282,13 @@ def render_conflict_page():
     #  ТАБ 2: ХРОНИКА ИВПН
     # ════════════════════════════════════════════
     with tab_news_hist:
-        st.markdown("### 📰 Хроника ИВПН — как менялся прогноз с новостями")
+        st.markdown("### 📰 История прогнозов — как менялся уровень напряжённости с новостями")
         if not _NEWS_AVAILABLE:
             st.error(f"Модули истории недоступны. Проверьте src/ivpn_history.py и src/news_fetcher.py")
         else:
             _records = load_history()
             if not _records:
-                st.info("История пуста. Нажмите «🔄 Проверить свежие новости» на вкладке 🇮🇷🆚🇺🇸 Иран / США.")
+                st.info("История пуста. Нажмите «� Анализ новых новостей» на вкладке 🇮🇷🆚🇺🇸 Иран / США.")
             else:
                 _cd = build_chart_data(_records)
                 _fig_hist = go.Figure()
@@ -1302,7 +1302,7 @@ def render_conflict_page():
                     x=_cd["ts"],
                     y=_cd["ivpn"],
                     mode="lines+markers",
-                    name="ИВПН",
+                    name="Уровень напряжённости",
                     line=dict(color="#e74c3c", width=2.5),
                     marker=dict(
                         size=10,
@@ -1317,7 +1317,7 @@ def render_conflict_page():
                     height=440,
                     margin=dict(l=0, r=80, t=20, b=0),
                     xaxis=dict(title="Дата обновления", showgrid=True),
-                    yaxis=dict(title="ИВПН", range=[0.5, 1.0], showgrid=True, tickformat=".2f"),
+                    yaxis=dict(title="Уровень напряжённости", range=[0.5, 1.0], showgrid=True, tickformat=".2f"),
                 )
                 st.plotly_chart(_fig_hist, use_container_width=True)
 
@@ -1328,7 +1328,7 @@ def render_conflict_page():
                     _top_ev = (_evs_r[0]["title"][:60] + "…") if _evs_r else "—"
                     _rows_h.append({
                         "Время (UTC)": _r["ts"][:16].replace("T", " "),
-                        "ИВПН": f"{_r['ivpn']:.3f}",
+                        "Ур. напряжённости": f"{_r['ivpn']:.3f}",
                         "P(E)": f"{_r['p_escalation']:.1%}",
                         "Состояние": _r["markov_state"],
                         "Источник": _r["source"],
@@ -1356,7 +1356,7 @@ def render_conflict_page():
             error  = abs(cp - actual)
             rows.append({
                 "Конфликт": f"{cdata['flag']} {cname}",
-                "ИВПН": round(civpn, 3),
+                "Ур. напряжённости": round(civpn, 3),
                 "P(E) модель": f"{cp:.1%}",
                 "Факт": "✅ эскалация" if actual >= 0.5 else "✅ сдерживание",
                 "Ошибка |ΔP|": f"{error:.1%}",
@@ -1485,7 +1485,7 @@ def render_conflict_page():
             rl, rc = risk_level(cp)
             comp_rows.append({
                 "Конфликт":          cname,
-                "ИВПН":              round(civpn, 3),
+                "Ур. напряжённости": round(civpn, 3),
                 "P(E)":              cp,
                 "Горизонт (мес.)":   round(ct, 0),
                 "Уровень риска":     rl,

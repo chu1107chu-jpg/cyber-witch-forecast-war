@@ -134,7 +134,7 @@ def build_chart_data(records: list[dict]) -> dict:
         # ─── hover-текст ───────────────────────────────────
         lines = [
             f"<b>{rec['ts'][:16].replace('T',' ')} UTC</b>",
-            f"ИВПН = <b>{rec['ivpn']:.3f}</b>  |  P(E) = <b>{rec['p_escalation']:.1%}</b>",
+            f"Уровень напряжённости = <b>{rec['ivpn']:.3f}</b>  |  P(эскалации) = <b>{rec['p_escalation']:.1%}</b>",
             f"Состояние: {rec['markov_state']}",
         ]
         if rec.get("factor_deltas"):
