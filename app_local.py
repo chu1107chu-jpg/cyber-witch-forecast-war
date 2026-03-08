@@ -22,16 +22,35 @@ warnings.filterwarnings("ignore")
 #  Константы
 # ─────────────────────────────────────────────
 ARTIFACTS = Path(__file__).parent / "data/artifacts/sklearn"
-TICKERS = [
+TICKERS_US = [
     "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA",
     "META", "TSLA", "BRK-B", "XOM", "JPM",
     "BTC-USD", "ETH-USD", "GC=F", "^GSPC", "^IXIC",
 ]
+TICKERS_RU = [
+    "SBER.ME", "GAZP.ME", "LKOH.ME", "NVTK.ME", "ROSN.ME",
+    "GMKN.ME", "YNDX.ME", "MGNT.ME", "MTSS.ME", "ALRS.ME",
+    "TATN.ME", "PIKK.ME", "PLZL.ME", "RTKM.ME", "VTBR.ME",
+]
+TICKERS = TICKERS_US + TICKERS_RU
+
 TICKER_LABELS = {
+    # US
     "AAPL": "Apple", "MSFT": "Microsoft", "GOOGL": "Google", "AMZN": "Amazon",
     "NVDA": "NVIDIA", "META": "Meta", "TSLA": "Tesla", "BRK-B": "Berkshire",
     "XOM": "ExxonMobil", "JPM": "JPMorgan", "BTC-USD": "Bitcoin",
     "ETH-USD": "Ethereum", "GC=F": "Gold", "^GSPC": "S&P 500", "^IXIC": "NASDAQ",
+    # RU
+    "SBER.ME": "Сбербанк", "GAZP.ME": "Газпром", "LKOH.ME": "ЛУКОЙЛ",
+    "NVTK.ME": "НОВАТЭК", "ROSN.ME": "Роснефть", "GMKN.ME": "Норникель",
+    "YNDX.ME": "Яндекс", "MGNT.ME": "Магнит", "MTSS.ME": "МТС",
+    "ALRS.ME": "АЛРОСА", "TATN.ME": "Татнефть", "PIKK.ME": "ПИК",
+    "PLZL.ME": "Полюс", "RTKM.ME": "Ростелеком", "VTBR.ME": "ВТБ",
+}
+
+MARKET_FLAGS = {
+    **{t: "🇺🇸" for t in TICKERS_US},
+    **{t: "🇷🇺" for t in TICKERS_RU},
 }
 
 # ─────────────────────────────────────────────
@@ -177,9 +196,11 @@ with st.sidebar:
     st.divider()
 
     if page == "🔍 Тикер":
+        market_filter = st.radio("Рынок", ["🇺🇸 США", "🇷🇺 Россия"], horizontal=True)
+        pool = TICKERS_US if market_filter == "🇺🇸 США" else TICKERS_RU
         sel_ticker = st.selectbox(
             "Тикер",
-            TICKERS,
+            pool,
             format_func=lambda t: f"{t} — {TICKER_LABELS.get(t, '')}",
         )
         period = st.select_slider(
@@ -211,12 +232,14 @@ if page == "📊 Дашборд":
     if not models_loaded:
         st.stop()
 
-    # Запускаем прогнозы для всех тикеров
-    with st.spinner("Считаю прогнозы для всех тикеров…"):
+    # Табы по рынкам
+    tab_us, tab_ru = st.tabs(["🇺🇸 США / Крипто / Индексы", "🇷🇺 Россия (MOEX)"])
+
+    def run_forecasts(ticker_list, label):
         rows = []
-        prog = st.progress(0, text="Загружаю данные…")
-        for i, ticker in enumerate(TICKERS):
-            prog.progress((i + 1) / len(TICKERS), text=f"↓ {ticker}")
+        prog = st.progress(0, text=f"Загружаю {label}…")
+        for i, ticker in enumerate(ticker_list):
+            prog.progress((i + 1) / len(ticker_list), text=f"↓ {ticker}")
             try:
                 pred, _ = predict_ticker(ticker, models, feature_cols)
                 if pred:
@@ -231,97 +254,82 @@ if page == "📊 Дашборд":
             except Exception:
                 pass
         prog.empty()
+        return rows
 
-    if not rows:
-        st.warning("Не удалось получить прогнозы. Проверьте интернет.")
-        st.stop()
+    def render_market_tab(ticker_list, label):
+        with st.spinner(f"Считаю прогнозы — {label}…"):
+            rows = run_forecasts(ticker_list, label)
+        if not rows:
+            st.warning("Нет данных. Проверьте интернет.")
+            return
+        df_table = pd.DataFrame(rows)
 
-    df_table = pd.DataFrame(rows)
+        # Сводные метрики
+        up1  = (df_table["p↑(t+1)"] > 0.5).sum()
+        up20 = (df_table["p↑(t+20)"] > 0.5).sum()
+        best = df_table.loc[df_table["p↑(t+1)"].idxmax(), "Тикер"]
+        best_p = df_table["p↑(t+1)"].max()
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("📈 Растут завтра",  f"{up1} / {len(rows)}")
+        c2.metric("📈 Растут за 20д", f"{up20} / {len(rows)}")
+        c3.metric("🏆 Лучший сигнал",  f"{best}", f"{best_p:.1%} вверх")
+        c4.metric("📅 Дата прогноза",  datetime.now().strftime("%d.%m.%Y"))
+        st.divider()
 
-    # ── Сводные метрики ──
-    up1  = (df_table["p↑(t+1)"] > 0.5).sum()
-    up20 = (df_table["p↑(t+20)"] > 0.5).sum()
-    best = df_table.loc[df_table["p↑(t+1)"].idxmax(), "Тикер"]
-    best_p = df_table["p↑(t+1)"].max()
+        col_l, col_r = st.columns([3, 2])
+        with col_l:
+            st.markdown('<div class="section-header">Прогноз направления (t+1)</div>', unsafe_allow_html=True)
+            df_sorted = df_table.sort_values("p↑(t+1)", ascending=True)
+            colors = ["#26c281" if p > 0.5 else "#e74c3c" for p in df_sorted["p↑(t+1)"]]
+            fig_bar = go.Figure(go.Bar(
+                x=df_sorted["p↑(t+1)"], y=df_sorted["Тикер"],
+                orientation="h", marker_color=colors,
+                text=[f"{p:.1%}" for p in df_sorted["p↑(t+1)"]], textposition="outside",
+            ))
+            fig_bar.add_vline(x=0.5, line_dash="dot", line_color="white", opacity=0.4)
+            fig_bar.update_layout(
+                height=max(300, len(rows) * 28),
+                margin=dict(l=10, r=50, t=10, b=10),
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="white"),
+                xaxis=dict(tickformat=".0%", range=[0, 1], showgrid=True, gridcolor="rgba(255,255,255,0.07)"),
+                yaxis=dict(showgrid=False), showlegend=False,
+            )
+            st.plotly_chart(fig_bar, use_container_width=True)
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("📈 Растут завтра",  f"{up1} / {len(rows)}")
-    c2.metric("📈 Растут за 20д", f"{up20} / {len(rows)}")
-    c3.metric("🏆 Лучший сигнал",  f"{best}", f"{best_p:.1%} вверх")
-    c4.metric("📅 Дата прогноза",  datetime.now().strftime("%d.%m.%Y"))
+        with col_r:
+            st.markdown('<div class="section-header">Ожидаемый доход (20 дней)</div>', unsafe_allow_html=True)
+            df_r20 = df_table.sort_values("R²⁰ (20д)", ascending=True)
+            colors20 = ["#26c281" if r > 0 else "#e74c3c" for r in df_r20["R²⁰ (20д)"]]
+            fig_r20 = go.Figure(go.Bar(
+                x=df_r20["R²⁰ (20д)"], y=df_r20["Тикер"],
+                orientation="h", marker_color=colors20,
+                text=[f"{r:+.2%}" for r in df_r20["R²⁰ (20д)"]], textposition="outside",
+            ))
+            fig_r20.add_vline(x=0, line_dash="dot", line_color="white", opacity=0.4)
+            fig_r20.update_layout(
+                height=max(300, len(rows) * 28),
+                margin=dict(l=10, r=60, t=10, b=10),
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="white"),
+                xaxis=dict(tickformat="+.1%", showgrid=True, gridcolor="rgba(255,255,255,0.07)"),
+                yaxis=dict(showgrid=False), showlegend=False,
+            )
+            st.plotly_chart(fig_r20, use_container_width=True)
 
-    st.divider()
+        st.markdown('<div class="section-header">Все прогнозы</div>', unsafe_allow_html=True)
+        display = df_table.copy()
+        display["r¹ (завтра)"] = display["r¹ (завтра)"].map("{:+.4f}".format)
+        display["R²⁰ (20д)"]  = display["R²⁰ (20д)"].map("{:+.4f}".format)
+        display["p↑(t+1)"]    = display["p↑(t+1)"].map("{:.1%}".format)
+        display["p↑(t+20)"]   = display["p↑(t+20)"].map("{:.1%}".format)
+        st.dataframe(display, use_container_width=True, hide_index=True)
 
-    # ── Визуализация ──
-    col_l, col_r = st.columns([3, 2])
+    with tab_us:
+        render_market_tab(TICKERS_US, "США / Крипто")
+    with tab_ru:
+        render_market_tab(TICKERS_RU, "Россия MOEX")
 
-    with col_l:
-        st.markdown('<div class="section-header">Прогноз направления (t+1)</div>',
-                    unsafe_allow_html=True)
-
-        # Горизонтальный бар-чарт вероятностей
-        df_sorted = df_table.sort_values("p↑(t+1)", ascending=True)
-        colors = ["#26c281" if p > 0.5 else "#e74c3c"
-                  for p in df_sorted["p↑(t+1)"]]
-        fig_bar = go.Figure(go.Bar(
-            x=df_sorted["p↑(t+1)"],
-            y=df_sorted["Тикер"],
-            orientation="h",
-            marker_color=colors,
-            text=[f"{p:.1%}" for p in df_sorted["p↑(t+1)"]],
-            textposition="outside",
-        ))
-        fig_bar.add_vline(x=0.5, line_dash="dot", line_color="white", opacity=0.4)
-        fig_bar.update_layout(
-            height=420,
-            margin=dict(l=10, r=50, t=10, b=10),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="white"),
-            xaxis=dict(tickformat=".0%", range=[0, 1], showgrid=True,
-                       gridcolor="rgba(255,255,255,0.07)"),
-            yaxis=dict(showgrid=False),
-            showlegend=False,
-        )
-        st.plotly_chart(fig_bar, use_container_width=True)
-
-    with col_r:
-        st.markdown('<div class="section-header">Ожидаемый доход (20 дней)</div>',
-                    unsafe_allow_html=True)
-        df_r20 = df_table.sort_values("R²⁰ (20д)", ascending=True)
-        colors20 = ["#26c281" if r > 0 else "#e74c3c" for r in df_r20["R²⁰ (20д)"]]
-        fig_r20 = go.Figure(go.Bar(
-            x=df_r20["R²⁰ (20д)"],
-            y=df_r20["Тикер"],
-            orientation="h",
-            marker_color=colors20,
-            text=[f"{r:+.2%}" for r in df_r20["R²⁰ (20д)"]],
-            textposition="outside",
-        ))
-        fig_r20.add_vline(x=0, line_dash="dot", line_color="white", opacity=0.4)
-        fig_r20.update_layout(
-            height=420,
-            margin=dict(l=10, r=60, t=10, b=10),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="white"),
-            xaxis=dict(tickformat="+.1%", showgrid=True,
-                       gridcolor="rgba(255,255,255,0.07)"),
-            yaxis=dict(showgrid=False),
-            showlegend=False,
-        )
-        st.plotly_chart(fig_r20, use_container_width=True)
-
-    # ── Таблица ──
-    st.markdown('<div class="section-header">Все прогнозы</div>',
-                unsafe_allow_html=True)
-
-    display = df_table.copy()
-    display["r¹ (завтра)"] = display["r¹ (завтра)"].map("{:+.4f}".format)
-    display["R²⁰ (20д)"]  = display["R²⁰ (20д)"].map("{:+.4f}".format)
-    display["p↑(t+1)"]    = display["p↑(t+1)"].map("{:.1%}".format)
-    display["p↑(t+20)"]   = display["p↑(t+20)"].map("{:.1%}".format)
-    st.dataframe(display, use_container_width=True, hide_index=True)
 
 
 # ═══════════════════════════════════════════════
