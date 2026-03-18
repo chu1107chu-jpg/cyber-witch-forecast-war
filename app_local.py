@@ -389,6 +389,17 @@ with st.sidebar:
     )
     st.divider()
 
+    st.markdown(
+        '<a href="/arena/" target="_blank" style="'
+        "display:block;text-align:center;padding:12px;margin:8px 0;"
+        "background:linear-gradient(135deg,#ff2d7b,#b84dff);"
+        "color:#fff;border-radius:20px;text-decoration:none;"
+        "font-weight:700;font-size:14px;"
+        'letter-spacing:1px;">🎮 ПОЛИТИЧЕСКАЯ АРЕНА</a>',
+        unsafe_allow_html=True,
+    )
+    st.divider()
+
     if page == "🔍 Тикер":
         market_filter = st.radio("Рынок", ["🇺🇸 США", "🇷🇺 Россия"], horizontal=True)
         pool = TICKERS_US if market_filter == "🇺🇸 США" else TICKERS_RU
