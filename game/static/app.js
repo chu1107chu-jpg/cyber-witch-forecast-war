@@ -56,11 +56,11 @@ function updateWallet() {
 }
 
 // ── Render Fighters Grid ────────────────────────────────
-function renderFighters(typeFilter = 'all') {
+function renderFighters() {
   const grid = $('#fightersGrid');
   grid.innerHTML = '';
 
-  const list = typeFilter === 'all' ? fighters : fighters.filter(f => f.type === typeFilter);
+  const list = fighters;
 
   list.forEach(f => {
     const card = document.createElement('div');
@@ -72,16 +72,20 @@ function renderFighters(typeFilter = 'all') {
     if (isSelected) card.classList.add('selected');
 
     card.innerHTML = `
-      <span class="kawaii-sparkle">✨</span>
-      <div class="fc-emoji">${f.emoji}</div>
-      <div class="fc-name">${f.name}</div>
-      <div class="fc-country">${f.country}</div>
-      <div class="fc-type">${f.type}</div>
-      <div class="fc-stats">
-        <div>HP <span class="stat-val">${f.hp}</span></div>
-        <div>ATK <span class="stat-val">${f.atk}</span></div>
-        <div>DEF <span class="stat-val">${f.def}</span></div>
-        <div>SPD <span class="stat-val">${f.spd}</span></div>
+      <div class="fc-portrait">
+        <img class="fc-avatar" src="${f.avatar}" alt="${f.name}" loading="lazy">
+        <div class="fc-avatar-overlay"></div>
+        <div class="fc-avatar-scanlines"></div>
+        <span class="fc-country-badge">${f.country}</span>
+      </div>
+      <div class="fc-info">
+        <div class="fc-name">${f.name}</div>
+        <div class="fc-stats">
+          <div class="fc-stat"><span class="stat-label">HP</span><span class="stat-val">${f.hp}</span></div>
+          <div class="fc-stat"><span class="stat-label">ATK</span><span class="stat-val">${f.atk}</span></div>
+          <div class="fc-stat"><span class="stat-label">DEF</span><span class="stat-val">${f.def}</span></div>
+          <div class="fc-stat"><span class="stat-label">SPD</span><span class="stat-val">${f.spd}</span></div>
+        </div>
       </div>
     `;
 
@@ -111,7 +115,7 @@ function selectFighter(f) {
     updateSlot('slotB', f);
   }
 
-  renderFighters(getCurrentFilter());
+  renderFighters();
   updateFightButton();
 }
 
@@ -125,7 +129,7 @@ function updateSlot(slotId, f) {
   slot.classList.add('filled');
   slot.innerHTML = `
     <button class="slot-remove" onclick="event.stopPropagation(); removeSlot('${slotId}')">×</button>
-    <div class="slot-emoji">${f.emoji}</div>
+    <img class="slot-avatar" src="${f.avatar}" alt="">
     <span>${f.name}</span>
   `;
 }
@@ -135,7 +139,7 @@ window.removeSlot = function(slotId) {
   if (slotId === 'slotA') { selectedA = null; }
   else { selectedB = null; }
   updateSlot(slotId, null);
-  renderFighters(getCurrentFilter());
+  renderFighters();
   updateFightButton();
 };
 
@@ -143,10 +147,7 @@ function updateFightButton() {
   $('#btnTobet').disabled = !(selectedA && selectedB);
 }
 
-function getCurrentFilter() {
-  const active = document.querySelector('.filter-btn.active');
-  return active ? active.dataset.type : 'all';
-}
+
 
 // ── Bet Screen ──────────────────────────────────────────
 function showBetScreen() {
@@ -160,9 +161,9 @@ function showBetScreen() {
 }
 
 function populateBetCard(side, f) {
-  $(`#betEmoji${side}`).textContent = f.emoji;
+  $(`#betEmoji${side}`).innerHTML = `<img class="bet-avatar" src="${f.avatar}" alt="">`;
   $(`#betName${side}`).textContent = f.name;
-  $(`#betType${side}`).textContent = `${f.type} · ${f.country}`;
+  $(`#betType${side}`).textContent = f.country;
   $(`#betStats${side}`).innerHTML = `
     <div>HP <strong>${f.hp}</strong></div>
     <div>ATK <strong>${f.atk}</strong></div>
@@ -187,6 +188,9 @@ function updateBetInfo() {
 }
 
 // ── Fight! ──────────────────────────────────────────────
+let currentFightId = null;
+let currentFightData = null;
+
 async function startFight() {
   const betAmt = parseInt($('#betAmount').value) || 0;
 
@@ -198,9 +202,9 @@ async function startFight() {
   showScreen('fight');
 
   // Setup fight display
-  $('#fightEmojiA').textContent = selectedA.emoji;
+  $('#fightEmojiA').innerHTML = `<img class="fight-avatar" src="${selectedA.avatar}" alt="">`;
   $('#fightNameA').textContent = selectedA.name;
-  $('#fightEmojiB').textContent = selectedB.emoji;
+  $('#fightEmojiB').innerHTML = `<img class="fight-avatar" src="${selectedB.avatar}" alt="">`;
   $('#fightNameB').textContent = selectedB.name;
   $('#hpBarA').style.width = '100%';
   $('#hpBarB').style.width = '100%';
@@ -208,11 +212,12 @@ async function startFight() {
   $('#hpTextB').textContent = `${selectedB.hp}/${selectedB.hp}`;
   $('#fightRound').textContent = 'РАУНД 1';
   $('#fightLog').innerHTML = '';
+  $('#movePicker').style.display = 'none';
 
-  // API call
+  // Start fight via API
   let data;
   try {
-    const res = await fetch(`${API}/api/fight`, {
+    const res = await fetch(`${API}/api/fight/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -235,66 +240,118 @@ async function startFight() {
     return;
   }
 
-  // Animate rounds
-  await animateRounds(data);
+  currentFightId = data.fight_id;
+  currentFightData = data;
 
-  // Update wallet
-  balance = data.wallet.balance;
-  freeRemaining = data.wallet.free_remaining;
-  updateWallet();
-
-  // Show result
-  showResult(data);
+  // Show move picker for round 1
+  showMovePicker(data.moves, data.round);
 }
 
-async function animateRounds(data) {
+function showMovePicker(moves, roundNum) {
+  $('#fightRound').textContent = `РАУНД ${roundNum}`;
+  const grid = $('#movesGrid');
+  grid.innerHTML = '';
+
+  moves.forEach(m => {
+    const btn = document.createElement('button');
+    btn.className = 'move-btn';
+    btn.disabled = !m.available;
+    const typeClass = m.type === 'ultimate' ? 'ultimate' : '';
+    btn.innerHTML = `
+      <div class="move-name">${m.name}</div>
+      <div class="move-info">DMG: ${m.base_dmg} · ACC: ${m.accuracy}%</div>
+      <span class="move-type ${typeClass}">${m.type}</span>
+    `;
+    if (m.available) {
+      btn.addEventListener('click', () => playRound(m.index));
+    }
+    grid.appendChild(btn);
+  });
+
+  $('#movePicker').style.display = 'block';
+}
+
+async function playRound(moveIndex) {
+  // Hide picker while processing
+  $('#movePicker').style.display = 'none';
+
+  let data;
+  try {
+    const res = await fetch(`${API}/api/fight/round`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fight_id: currentFightId,
+        move_index: moveIndex,
+      }),
+    });
+    data = await res.json();
+    if (!res.ok) {
+      alert(data.detail || 'Ошибка');
+      return;
+    }
+  } catch (e) {
+    alert('Ошибка соединения');
+    return;
+  }
+
+  // Animate this round
+  await animateOneRound(data);
+
+  if (data.fight_over) {
+    // Update wallet
+    balance = data.wallet.balance;
+    freeRemaining = data.wallet.free_remaining;
+    updateWallet();
+    // Show result
+    showResult(data.result);
+  } else {
+    // Show move picker for next round
+    showMovePicker(data.next_moves, data.round + 1);
+  }
+}
+
+async function animateOneRound(r) {
   const log = $('#fightLog');
   const maxHpA = selectedA.hp;
   const maxHpB = selectedB.hp;
 
-  for (let i = 0; i < data.rounds.length; i++) {
-    const r = data.rounds[i];
-
-    $('#fightRound').textContent = `РАУНД ${r.round}`;
-
-    // Parse narration lines
-    const lines = r.narration.split('\n');
-    for (const line of lines) {
-      await sleep(600);
-      const div = document.createElement('div');
-      div.className = 'log-line';
-      if (line.includes('КРИТ') || line.includes('КРИТИЧЕСКИЙ')) div.className += ' crit';
-      else if (line.includes('промах') || line.includes('мимо')) div.className += ' miss';
-      else if (line.startsWith('Раунд') || line.startsWith('Гонг')) div.className += ' round-start';
-      else if (line.includes('↳')) div.className += ' effect';
-      div.textContent = line;
-      log.appendChild(div);
-      log.scrollTop = log.scrollHeight;
-    }
-
-    // Update HP bars
-    const hpAPct = Math.max(0, (r.hp_a / maxHpA) * 100);
-    const hpBPct = Math.max(0, (r.hp_b / maxHpB) * 100);
-
-    const barA = $('#hpBarA');
-    const barB = $('#hpBarB');
-    barA.style.width = `${hpAPct}%`;
-    barB.style.width = `${hpBPct}%`;
-
-    barA.className = 'hp-fill' + (hpAPct < 20 ? ' critical' : hpAPct < 40 ? ' low' : '');
-    barB.className = 'hp-fill' + (hpBPct < 20 ? ' critical' : hpBPct < 40 ? ' low' : '');
-
-    $('#hpTextA').textContent = `${r.hp_a}/${maxHpA}`;
-    $('#hpTextB').textContent = `${r.hp_b}/${maxHpB}`;
-
-    await sleep(800);
+  const lines = r.narration.split('\n');
+  for (const line of lines) {
+    await sleep(500);
+    const div = document.createElement('div');
+    div.className = 'log-line';
+    if (line.includes('КРИТ') || line.includes('КРИТИЧЕСКИЙ')) div.className += ' crit';
+    else if (line.includes('промах') || line.includes('мимо')) div.className += ' miss';
+    else if (line.startsWith('Раунд') || line.startsWith('Гонг')) div.className += ' round-start';
+    else if (line.includes('↳')) div.className += ' effect';
+    div.textContent = line;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
   }
+
+  const hpAPct = Math.max(0, (r.hp_a / maxHpA) * 100);
+  const hpBPct = Math.max(0, (r.hp_b / maxHpB) * 100);
+
+  const barA = $('#hpBarA');
+  const barB = $('#hpBarB');
+  barA.style.width = `${hpAPct}%`;
+  barB.style.width = `${hpBPct}%`;
+
+  barA.className = 'hp-fill' + (hpAPct < 20 ? ' critical' : hpAPct < 40 ? ' low' : '');
+  barB.className = 'hp-fill' + (hpBPct < 20 ? ' critical' : hpBPct < 40 ? ' low' : '');
+
+  $('#hpTextA').textContent = `${r.hp_a}/${maxHpA}`;
+  $('#hpTextB').textContent = `${r.hp_b}/${maxHpB}`;
+
+  await sleep(600);
 }
 
 // ── Result ──────────────────────────────────────────────
 function showResult(data) {
   const won = data.bet.won;
-  const winnerFighter = data.winner_id === selectedA.id ? selectedA : selectedB;
+  const winnerId = data.winner_id;
+  const winnerFighter = winnerId === selectedA.id ? selectedA : selectedB;
 
   const glow = $('#resultGlow');
   glow.className = 'result-glow ' + (won ? 'win' : 'lose');
@@ -328,14 +385,7 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ── Event Bindings ──────────────────────────────────────
 function bindEvents() {
-  // Filters
-  $$('.filter-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      $$('.filter-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      renderFighters(btn.dataset.type);
-    });
-  });
+
 
   // To bet screen
   $('#btnTobet').addEventListener('click', showBetScreen);
