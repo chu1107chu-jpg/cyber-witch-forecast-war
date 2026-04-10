@@ -47,9 +47,17 @@ function renderRoster() {
   });
 }
 
-function selectFighter(id) {
+async function selectFighter(id) {
   const f = fighters.find(x => x.id === id);
   if (!f) return;
+  // Загрузить полные данные (с moves, taunt) если ещё нет
+  let full = f;
+  if (!f.moves) {
+    try {
+      const r = await fetch(`/api/fighters/${id}`);
+      if (r.ok) { full = await r.json(); Object.assign(f, full); }
+    } catch(e) {}
+  }
   const cards = $$('.roster-card');
   if (!selectedA || (selectedA && selectedB)) {
     selectedA = f; selectedB = null;
@@ -227,6 +235,7 @@ function doSpecial(atk, def) {
   updateComboBar(atk);
   $(`#specCtrl${atk}`).classList.remove('ready');
   const move = a.ultimate;
+  showSuperOverlay(a, move.name || 'СУПЕРУДАР', move.desc || '');
   const d = gs[def];
   const rand = 0.9 + Math.random() * 0.2;
   const acc = move.accuracy || 0.85;
@@ -340,6 +349,8 @@ function endFight(winner) {
   $('#resultTitle').textContent = '🏆 ПОБЕДА!';
   $('#resultAvatar').src = w.avatar;
   $('#resultName').textContent = w.name;
+  const tauntEl = $('#resultTaunt');
+  if (tauntEl) tauntEl.textContent = w.taunt ? `"${w.taunt}"` : '';
   $('#resultDetails').textContent = `${w.name} победил ${l.name} | HP: ${Math.round(w.hp)} | Раунд ${round}`;
   showScreen('screenResult');
 }
