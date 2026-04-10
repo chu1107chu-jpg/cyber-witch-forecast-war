@@ -1033,12 +1033,16 @@ def render_politicians_page() -> None:
         # Классы анимации
         anim_a = "pk-winner-anim" if is_a_winner else "pk-loser-anim"
         anim_b = "pk-loser-anim" if is_a_winner else "pk-winner-anim"
+        box_cls_a = "winner-stage" if is_a_winner else "loser-stage"
+        box_cls_b = "winner-stage" if not is_a_winner else "loser-stage"
+        laurel_a = '<div class="pk-laurel">👑</div>' if is_a_winner else ""
+        laurel_b = '<div class="pk-laurel">👑</div>' if not is_a_winner else ""
 
         # Портреты с анимацией
         st.markdown(
             f'<div class="pk-stage">'
-            f'<div class="pk-stage-box {"winner-stage" if is_a_winner else "loser-stage"}">'
-            f'{"<div class=\"pk-laurel\">👑</div>" if is_a_winner else ""}'
+            f'<div class="pk-stage-box {box_cls_a}">'
+            f'{laurel_a}'
             f'<div class="{anim_a}"><div class="pk-stage-emoji">{fighter_a["icon"]}</div></div>'
             f'<div class="pk-stage-name">{fighter_a["name"]}</div>'
             f'<div class="pk-stage-score">{result["pct_a"]}%</div>'
@@ -1048,8 +1052,8 @@ def render_politicians_page() -> None:
             f'<div style="font-size:28px;">⚡</div>'
             f'<div style="font-family:Orbitron;font-size:11px;color:rgba(255,107,157,.5);">VS</div>'
             f'</div>'
-            f'<div class="pk-stage-box {"winner-stage" if not is_a_winner else "loser-stage"}">'
-            f'{"<div class=\"pk-laurel\">👑</div>" if not is_a_winner else ""}'
+            f'<div class="pk-stage-box {box_cls_b}">'
+            f'{laurel_b}'
             f'<div class="{anim_b}"><div class="pk-stage-emoji">{fighter_b["icon"]}</div></div>'
             f'<div class="pk-stage-name">{fighter_b["name"]}</div>'
             f'<div class="pk-stage-score">{result["pct_b"]}%</div>'
@@ -1114,3 +1118,5 @@ def render_politicians_page() -> None:
             f'</div></div>',
             unsafe_allow_html=True,
         )
+
+render_politicians_page()

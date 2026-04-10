@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>POLITICAL ARENA — FIGHT</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/fight.css">
+</head>
+<body>
+
+<!-- ═══ SETUP SCREEN ═══ -->
+<div class="screen active" id="screenSetup">
+  <div class="setup-header">
+    <a class="back-btn" href="/">&#8592; ЛОББИ</a>
+    <h1>&#9876; POLITICAL ARENA</h1>
+  </div>
+  <div class="mode-selector">
+    <button class="mode-btn active" id="btnPvE" onclick="setMode('pve')">&#129302; vs AI</button>
+    <button class="mode-btn"        id="btnPvP" onclick="setMode('pvp')">&#127918; vs ИГРОК</button>
+  </div>
+  <div class="fighter-selection">
+    <div class="fighter-pick">
+      <div class="pick-label">ИГРОК 1</div>
+      <div class="pick-controls" id="pickControlsA">A / D / W / S | F</div>
+      <div class="pick-portrait" id="portraitA"><div class="pick-placeholder">?</div></div>
+      <div class="pick-name" id="pickNameA">— выбери —</div>
+    </div>
+    <div class="pick-vs">VS</div>
+    <div class="fighter-pick">
+      <div class="pick-label" id="labelB">&#129302; AI</div>
+      <div class="pick-controls" id="pickControlsB">AUTO</div>
+      <div class="pick-portrait" id="portraitB"><div class="pick-placeholder">?</div></div>
+      <div class="pick-name" id="pickNameB">— выбери —</div>
+    </div>
+  </div>
+  <div class="fighters-scroll">
+    <div class="fighters-row" id="roster"></div>
+  </div>
+  <button class="btn-start" id="btnStart" disabled onclick="startFight()">&#9876; В БОЙ!</button>
+</div>
+
+<!-- ═══ ARENA SCREEN ═══ -->
+<div class="screen" id="screenArena">
+
+  <!-- HUD -->
+  <div class="hud">
+    <div class="hud-left">
+      <img class="hud-avatar" id="hudAvatarA" src="" alt="">
+      <div class="hud-info">
+        <div class="hud-name" id="hudNameA">—</div>
+        <div class="hp-bar"><div class="hp-fill" id="hpFillA" style="width:100%"></div></div>
+        <div class="combo-bar"><div class="combo-fill" id="comboFillA" style="width:0%"></div></div>
+        <div style="font-size:10px;color:#888;margin-top:2px">
+          <span id="hpNumA">—</span> HP &nbsp; &#9889; <span id="comboCountA">0</span>/3
+        </div>
+      </div>
+    </div>
+    <div class="hud-center">
+      <div class="round-num" id="roundNum">RD 1</div>
+      <div class="timer" id="timer">45</div>
+      <div style="font-size:11px;color:#666" id="roundScore">0 — 0</div>
+    </div>
+    <div class="hud-right">
+      <div class="hud-info right">
+        <div class="hud-name" id="hudNameB">—</div>
+        <div class="hp-bar"><div class="hp-fill right" id="hpFillB" style="width:100%"></div></div>
+        <div class="combo-bar"><div class="combo-fill right" id="comboFillB" style="width:0%"></div></div>
+        <div style="font-size:10px;color:#888;margin-top:2px;text-align:right">
+          <span id="hpNumB">—</span> HP &nbsp; &#9889; <span id="comboCountB">0</span>/3
+        </div>
+      </div>
+      <img class="hud-avatar" id="hudAvatarB" src="" alt="">
+    </div>
+  </div>
+
+  <!-- Stage -->
+  <div class="arena" id="arena">
+    <div class="fighter" id="fighterA">
+      <img class="fighter-img" id="imgA" src="" alt="">
+      <div class="shield" id="shieldA">&#128737;</div>
+    </div>
+    <div class="falling-zone" id="fallingZone"></div>
+    <div class="damage-layer" id="damageLayer"></div>
+    <div class="move-log" id="moveLog"></div>
+    <div class="fighter" id="fighterB">
+      <img class="fighter-img flip" id="imgB" src="" alt="">
+      <div class="shield" id="shieldB">&#128737;</div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <div class="ctrl-side" id="ctrlLeft">
+      <button class="ctrl-btn" ontouchstart="act('A','left')"  onclick="act('A','left')">&#128074;<br><kbd>A</kbd></button>
+      <button class="ctrl-btn" ontouchstart="act('A','right')" onclick="act('A','right')">&#129148;<br><kbd>D</kbd></button>
+      <button class="ctrl-btn" ontouchstart="act('A','kick')"  onclick="act('A','kick')">&#129461;<br><kbd>W</kbd></button>
+      <button class="ctrl-btn block"
+        ontouchstart="act('A','block')" ontouchend="actEnd('A')"
+        onmousedown="act('A','block')" onmouseup="actEnd('A')">&#128737;<br><kbd>S</kbd></button>
+      <button class="ctrl-btn special" id="specA" disabled
+        ontouchstart="act('A','special')" onclick="act('A','special')">&#9889;<br><kbd>F</kbd></button>
+    </div>
+    <button class="btn-pause" onclick="togglePause()">&#9208;</button>
+    <div class="ctrl-side" id="ctrlRight" style="display:none">
+      <button class="ctrl-btn" ontouchstart="act('B','left')"  onclick="act('B','left')">&#128074;<br><kbd>&#8592;</kbd></button>
+      <button class="ctrl-btn" ontouchstart="act('B','right')" onclick="act('B','right')">&#129148;<br><kbd>&#8594;</kbd></button>
+      <button class="ctrl-btn" ontouchstart="act('B','kick')"  onclick="act('B','kick')">&#129461;<br><kbd>&#8593;</kbd></button>
+      <button class="ctrl-btn block"
+        ontouchstart="act('B','block')" ontouchend="actEnd('B')"
+        onmousedown="act('B','block')" onmouseup="actEnd('B')">&#128737;<br><kbd>&#8595;</kbd></button>
+      <button class="ctrl-btn special" id="specB" disabled
+        ontouchstart="act('B','special')" onclick="act('B','special')">&#9889;<br><kbd>Enter</kbd></button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ROUND BREAK OVERLAY ═══ -->
+<div class="round-break-overlay" id="screenRoundBreak">
+  <div class="round-break-title" id="roundBreakTitle">РАУНД ОКОНЧЕН</div>
+  <div class="round-break-sub" id="roundBreakResult">—</div>
+  <div class="round-break-score" id="roundBreakScore">0 — 0</div>
+  <div class="round-break-sub" id="roundBreakNext">Раунд 2</div>
+</div>
+
+<!-- ═══ PAUSE OVERLAY ═══ -->
+<div class="overlay" id="pauseOverlay" style="display:none">
+  <div class="pause-box">
+    <h2>&#9208; ПАУЗА</h2>
+    <button onclick="togglePause()">&#9654; ПРОДОЛЖИТЬ</button>
+    <button onclick="location.reload()">&#128260; РЕСТАРТ</button>
+    <a href="/">&#8592; В ЛОББИ</a>
+  </div>
+</div>
+
+<!-- ═══ RESULT SCREEN ═══ -->
+<div class="screen" id="screenResult">
+  <div class="result-box">
+    <div class="result-title" id="resultTitle">—</div>
+    <img class="result-img" id="resultImg" src="" alt="">
+    <div class="result-name" id="resultName">—</div>
+    <div style="font-size:16px;color:#ffd700;margin:8px 0;font-style:italic" id="resultTaunt"></div>
+    <div class="result-stats" id="resultStats"></div>
+    <div class="result-btns">
+      <button onclick="rematch()">&#128260; РЕВАНШ</button>
+      <button onclick="changeChampion()">&#127918; СМЕНИТЬ БОЙЦА</button>
+      <a href="/">&#8592; ГЛАВНАЯ</a>
+    </div>
+  </div>
+</div>
+
+<script src="/static/audio.js"></script>
+<script src="/static/fight.js"></script>
+</body>
+</html>

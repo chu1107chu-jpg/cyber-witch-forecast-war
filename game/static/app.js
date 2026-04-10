@@ -80,11 +80,12 @@ function renderFighters() {
       </div>
       <div class="fc-info">
         <div class="fc-name">${f.name}</div>
+        <div class="fc-type-badge">${f.type || ''}</div>
         <div class="fc-stats">
-          <div class="fc-stat"><span class="stat-label">HP</span><span class="stat-val">${f.hp}</span></div>
-          <div class="fc-stat"><span class="stat-label">ATK</span><span class="stat-val">${f.atk}</span></div>
-          <div class="fc-stat"><span class="stat-label">DEF</span><span class="stat-val">${f.def}</span></div>
-          <div class="fc-stat"><span class="stat-label">SPD</span><span class="stat-val">${f.spd}</span></div>
+          <div class="stat-bar-row"><span class="stat-bar-label">HP</span><div class="stat-bar-track"><div class="stat-bar-fill" style="width:${Math.min(100,Math.round(f.hp/3.2))}%;background:${f.color||'#e74c3c'}"></div></div><span class="stat-val-num">${f.hp}</span></div>
+          <div class="stat-bar-row"><span class="stat-bar-label">ATK</span><div class="stat-bar-track"><div class="stat-bar-fill" style="width:${Math.min(100,f.atk*2)}%;background:${f.color||'#e74c3c'}"></div></div><span class="stat-val-num">${f.atk}</span></div>
+          <div class="stat-bar-row"><span class="stat-bar-label">DEF</span><div class="stat-bar-track"><div class="stat-bar-fill" style="width:${Math.min(100,f.def*2)}%;background:${f.color||'#e74c3c'}"></div></div><span class="stat-val-num">${f.def}</span></div>
+          <div class="stat-bar-row"><span class="stat-bar-label">SPD</span><div class="stat-bar-track"><div class="stat-bar-fill" style="width:${Math.min(100,f.spd*10)}%;background:${f.color||'#e74c3c'}"></div></div><span class="stat-val-num">${f.spd}</span></div>
         </div>
       </div>
     `;

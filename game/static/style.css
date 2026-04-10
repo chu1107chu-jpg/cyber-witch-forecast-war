@@ -993,3 +993,12 @@ body::after {
   .fc-name { font-size: 10px; }
   .screen { padding: var(--sp-2); }
 }
+
+
+/* ── STAT BARS (fighter cards) ────────────────────────── */
+.stat-bar-row   { display: flex; align-items: center; gap: 5px; margin-bottom: 3px; }
+.stat-bar-label { width: 26px; font-size: 9px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; flex-shrink: 0; }
+.stat-bar-track { flex: 1; height: 4px; background: rgba(255,255,255,.06); border-radius: 2px; overflow: hidden; }
+.stat-bar-fill  { height: 100%; border-radius: 2px; transition: width .4s ease; }
+.stat-val-num   { font-size: 9px; color: var(--text-muted); width: 20px; text-align: right; flex-shrink: 0; }
+.fc-type-badge  { font-size: 9px; color: var(--text-secondary); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }

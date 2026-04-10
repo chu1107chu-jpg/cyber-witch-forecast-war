@@ -110,6 +110,14 @@ def index():
 
 # ── API: Fighters ────────────────────────────────────────
 
+
+@app.get("/tz", response_class=HTMLResponse)
+def tz_page():
+    tz_path = BASE_DIR.parent / "ТЗ" / "GAME_SPEC.html"
+    if not tz_path.exists():
+        return HTMLResponse("<h1>ТЗ не найдено</h1>", status_code=404)
+    return tz_path.read_text(encoding="utf-8")
+
 @app.get("/api/fighters")
 def api_fighters():
     result = []
@@ -135,6 +143,7 @@ def api_fighters():
             "weakness_meme": f.get("weakness_meme", ""),
             "avatar": f"/static/avatars/{f['id']}.{avatar_ext}",
             "tier": tier,
+            "moves": f.get("moves", []),
         })
     return {"fighters": result, "total": len(result)}
 
@@ -392,3 +401,8 @@ def api_wallet_deposit(request: Request, response: Response):
     _set_cookie(response, user["sid"])
     new_bal = update_balance(user["id"], 100)
     return {"balance": new_bal}
+
+@app.get("/fight", response_class=HTMLResponse)
+def fight_page():
+    return (TEMPLATES_DIR / "fight.html").read_text(encoding="utf-8")
+

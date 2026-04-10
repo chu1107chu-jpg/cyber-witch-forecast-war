@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>POLITICAL ARENA — ТЗ v1.0</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a0f;color:#ccc;font-family:'Segoe UI',system-ui,sans-serif;line-height:1.7;padding:0}
+a{color:#ffd700;text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* NAV */
+.nav{position:fixed;top:0;left:0;width:260px;height:100vh;background:#111;border-right:1px solid #222;overflow-y:auto;padding:16px 12px;z-index:10}
+.nav h2{font-size:.85rem;color:#ffd700;margin:0 0 12px;letter-spacing:2px}
+.nav ul{list-style:none}
+.nav li{margin-bottom:2px}
+.nav a{display:block;padding:6px 10px;border-radius:6px;font-size:.8rem;color:#888;transition:all .15s}
+.nav a:hover,.nav a.active{background:rgba(255,215,0,.08);color:#ffd700;text-decoration:none}
+.nav .sub{padding-left:16px;font-size:.75rem}
+
+/* MAIN */
+.main{margin-left:260px;max-width:960px;padding:40px 48px 80px}
+@media(max-width:800px){.nav{display:none}.main{margin-left:0;padding:20px 16px}}
+
+/* HEADERS */
+h1{font-size:2.2rem;font-weight:900;background:linear-gradient(135deg,#ff6b35,#ffd700);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:0 0 8px}
+.subtitle{color:#666;font-size:.9rem;margin-bottom:32px}
+h2{font-size:1.5rem;font-weight:800;color:#ff6b35;margin:48px 0 16px;padding-bottom:8px;border-bottom:2px solid #1a1a2e}
+h3{font-size:1.1rem;font-weight:700;color:#ffd700;margin:24px 0 10px}
+h4{font-size:.95rem;color:#aaa;margin:16px 0 8px}
+
+/* CONTENT */
+p{margin-bottom:12px}
+ul,ol{margin:0 0 16px 24px}
+li{margin-bottom:4px}
+strong{color:#fff}
+em{color:#ff6b35;font-style:normal}
+code{background:#1a1a2e;color:#ffd700;padding:2px 6px;border-radius:4px;font-size:.85rem;font-family:'Fira Code','Consolas',monospace}
+pre{background:#0d0d1a;border:1px solid #222;border-radius:8px;padding:16px;overflow-x:auto;margin:12px 0 20px;font-size:.82rem;line-height:1.5;color:#9dbcd4}
+pre code{background:none;padding:0;color:inherit}
+
+/* TABLES */
+table{width:100%;border-collapse:collapse;margin:12px 0 24px;font-size:.85rem}
+th{background:#1a1a2e;color:#ffd700;text-align:left;padding:10px 12px;border:1px solid #222;font-weight:700}
+td{padding:8px 12px;border:1px solid #1a1a2e;color:#aaa}
+tr:nth-child(even) td{background:rgba(255,255,255,.02)}
+
+/* STATUS */
+.done{color:#2ecc71}.wip{color:#f1c40f}.todo{color:#e74c3c}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.7rem;font-weight:700;margin-left:6px}
+.badge-done{background:rgba(46,204,113,.15);color:#2ecc71}
+.badge-wip{background:rgba(241,196,15,.15);color:#f1c40f}
+.badge-todo{background:rgba(231,76,60,.15);color:#e74c3c}
+
+/* FLOW */
+.flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:16px 0;padding:16px;background:#111;border-radius:10px;border:1px solid #222}
+.flow-step{background:#1a1a2e;border:1px solid #333;border-radius:8px;padding:8px 14px;font-size:.8rem;color:#ddd;white-space:nowrap}
+.flow-arrow{color:#ff6b35;font-size:1.2rem}
+
+/* SCHEMA */
+.schema-block{background:#0d0d1a;border:1px solid #222;border-radius:10px;padding:20px;margin:12px 0 24px}
+.schema-block h4{color:#ffd700;margin:0 0 8px}
+
+/* PHASE */
+.phase{background:#111;border:1px solid #222;border-radius:12px;padding:20px;margin:12px 0}
+.phase-title{font-size:1rem;font-weight:800;color:#ff6b35;margin-bottom:12px}
+.phase ul{margin:0;padding-left:20px}
+.phase li{margin-bottom:6px;font-size:.9rem}
+
+/* SECTION DIVIDER */
+.divider{height:1px;background:linear-gradient(90deg,transparent,#333,transparent);margin:48px 0}
+
+/* TOP BAR */
+.topbar{background:#111;border-bottom:1px solid #222;padding:12px 48px;margin-left:260px;position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between}
+@media(max-width:800px){.topbar{margin-left:0;padding:12px 16px}}
+.topbar-title{color:#ffd700;font-size:.8rem;letter-spacing:2px;font-weight:700}
+.topbar-date{color:#555;font-size:.75rem}
+</style>
+</head>
+<body>
+
+<!-- NAVIGATION -->
+<nav class="nav">
+  <h2>📋 ТЗ НАВИГАЦИЯ</h2>
+  <ul>
+    <li><a href="#s1">1. Общее описание</a></li>
+    <li><a href="#s2">2. Экраны и флоу</a></li>
+    <li class="sub"><a href="#s2-1">2.1 Заставка</a></li>
+    <li class="sub"><a href="#s2-2">2.2 Главная</a></li>
+    <li class="sub"><a href="#s2-3">2.3 Ростер</a></li>
+    <li class="sub"><a href="#s2-4">2.4 Арена</a></li>
+    <li class="sub"><a href="#s2-5">2.5 Результат</a></li>
+    <li class="sub"><a href="#s2-6">2.6 Рекорды</a></li>
+    <li><a href="#s3">3. Управление</a></li>
+    <li><a href="#s4">4. Карточки бойцов</a></li>
+    <li><a href="#s5">5. Боевая механика</a></li>
+    <li class="sub"><a href="#s5-3">5.3 Суперудары</a></li>
+    <li class="sub"><a href="#s5-4">5.4 Secret Combo</a></li>
+    <li><a href="#s6">6. Авторизация</a></li>
+    <li><a href="#s7">7. База данных</a></li>
+    <li><a href="#s8">8. Визуал</a></li>
+    <li><a href="#s9">9. Таблица рекордов</a></li>
+    <li><a href="#s10">10. Монетизация</a></li>
+    <li><a href="#s11">11. Админка</a></li>
+    <li><a href="#s12">12. API эндпоинты</a></li>
+    <li><a href="#s13">13. Структура файлов</a></li>
+    <li><a href="#s14">14. Приоритеты</a></li>
+    <li><a href="#s15">15. Деплой</a></li>
+  </ul>
+</nav>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-title">POLITICAL ARENA — ТЗ</div>
+  <div class="topbar-date">v1.0 · 11 апреля 2026</div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+<h1>🎮 POLITICAL ARENA</h1>
+<p class="subtitle">Техническое задание v1.0 · Часть сервиса предсказания эскалации конфликтов (cyber-witch-forecast-war)</p>
+
+<!-- ════════════════ 1 ════════════════ -->
+<div class="divider"></div>
+<h2 id="s1">1. Общее описание</h2>
+
+<p><strong>Political Arena</strong> — браузерная файтинг-игра в стиле <em>horror</em>, где политики дерутся друг с другом. 44 бойца со статами, именными ударами-мемами и уникальными спецприёмами.</p>
+
+<h3>Стек</h3>
+<table>
+  <tr><th>Компонент</th><th>Технология</th></tr>
+  <tr><td>Backend</td><td>Python 3.11+, FastAPI, uvicorn (порт 8502)</td></tr>
+  <tr><td>Frontend</td><td>Vanilla JS + CSS (без фреймворков)</td></tr>
+  <tr><td>БД</td><td>SQLite → PostgreSQL при масштабировании</td></tr>
+  <tr><td>Деплой</td><td>MAMP (Apache) на Mac → VPS / Railway / Fly.io</td></tr>
+</table>
+
+<h3>Визуальный стиль</h3>
+<p>Тёмный <em>horror</em> — чёрные/бордовые тона, неоновые акценты оранжевого и золота, грубая игровая стилистика.</p>
+
+<!-- ════════════════ 2 ════════════════ -->
+<div class="divider"></div>
+<h2 id="s2">2. Экраны и флоу</h2>
+
+<div class="flow">
+  <div class="flow-step">🖼 Заставка</div><div class="flow-arrow">→</div>
+  <div class="flow-step">🏠 Главная</div><div class="flow-arrow">→</div>
+  <div class="flow-step">🃏 Ростер</div><div class="flow-arrow">→</div>
+  <div class="flow-step">⚔️ Арена (3 раунда)</div><div class="flow-arrow">→</div>
+  <div class="flow-step">🏆 Результат</div><div class="flow-arrow">→</div>
+  <div class="flow-step">🔄 Ростер / Главная</div>
+</div>
+
+<h3 id="s2-1">2.1 Заставка (Splash Screen)</h3>
+<ul>
+  <li>Полноэкранная картинка-заставка (будет предоставлена позже)</li>
+  <li>Прогресс-бар загрузки ассетов (аватары, звуки)</li>
+  <li>Кнопка <strong>"НАЧАТЬ"</strong> появляется после загрузки</li>
+  <li>Фоновая horror-музыка начинает играть</li>
+</ul>
+
+<h3 id="s2-2">2.2 Главная / Лобби</h3>
+<ul>
+  <li>Логотип + название</li>
+  <li>Кнопки: <strong>"ИГРАТЬ"</strong>, <strong>"Таблица рекордов"</strong>, <strong>"Настройки"</strong></li>
+  <li>Авторизация: вход по email / телефон / Google</li>
+  <li>Баланс ₲ (токены) в правом верхнем углу</li>
+  <li>Daily bonus кнопка</li>
+</ul>
+
+<h3 id="s2-3">2.3 Ростер (выбор бойцов)</h3>
+<ul>
+  <li>Сетка крупных карточек бойцов (подробности в разделе 4)</li>
+  <li>Переключатель режима: <strong>vs AI</strong> / <strong>vs Игрок</strong> (hot-seat)</li>
+  <li>2 слота: ИГРОК 1 / ИГРОК 2 (или AI)</li>
+  <li>Кнопка <strong>"В БОЙ!"</strong> (активна когда оба слота заполнены)</li>
+  <li>Ставка на бойца + сумма ₲</li>
+  <li>★ Избранные бойцы (хранятся в БД, отмечаются после боя)</li>
+</ul>
+
+<h3 id="s2-4">2.4 Арена (бой)</h3>
+<ul>
+  <li><strong>3 раунда</strong>, <strong>45 секунд</strong> на раунд</li>
+  <li>HUD сверху: аватары, имена, HP-бары, combo-бар, раунд, таймер</li>
+  <li>Центр: анимированный бой (CSS-анимации + фото бойцов)</li>
+  <li>Разные фоны арены (изображения, будут предоставлены)</li>
+  <li>Управление слева внизу — подсказка клавиш для игрока</li>
+  <li>При vs AI — кнопки второго игрока скрыты</li>
+  <li>Мобильные тач-кнопки (яркие, полупрозрачные)</li>
+  <li>Лог ударов внизу</li>
+</ul>
+
+<h3 id="s2-5">2.5 Результат</h3>
+<ul>
+  <li>Портрет победителя + его фраза (<code>taunt</code>)</li>
+  <li>Кнопки: <strong>"Реванш!"</strong>, <strong>"Сменить бойца"</strong>, <strong>"← Главная"</strong></li>
+  <li>Кнопка <strong>★ Добавить в избранное</strong></li>
+  <li>Статистика боя: урон, криты, комбо</li>
+</ul>
+
+<h3 id="s2-6">2.6 Таблица рекордов</h3>
+<ul>
+  <li>Отдельная страница <code>/leaderboard</code></li>
+  <li>Топ-100 игроков по количеству побед</li>
+  <li>Колонки: #, аватар, ник, побед, лучшая серия, баланс ₲</li>
+</ul>
+
+<!-- ════════════════ 3 ════════════════ -->
+<div class="divider"></div>
+<h2 id="s3">3. Управление</h2>
+
+<h3>3.1 Клавиатура</h3>
+<table>
+  <tr><th>Действие</th><th>Игрок 1 (P1)</th><th>Игрок 2 (P2)</th></tr>
+  <tr><td>Удар рукой</td><td><code>A</code> / <code>D</code></td><td><code>←</code> / <code>→</code></td></tr>
+  <tr><td>Удар ногой</td><td><code>W</code></td><td><code>↑</code></td></tr>
+  <tr><td>Блок</td><td><code>S</code></td><td><code>↓</code></td></tr>
+  <tr><td>Суперудар</td><td><code>F</code> / <code>Space</code></td><td><code>Enter</code></td></tr>
+  <tr><td>Пауза</td><td colspan="2"><code>ESC</code> / <code>P</code></td></tr>
+</table>
+
+<h3>3.2 Мобильный тач</h3>
+<ul>
+  <li>Полупрозрачные яркие кнопки поверх арены</li>
+  <li>Левая сторона: удары + блок</li>
+  <li>Правая сторона: суперудар</li>
+  <li>Пауза — вверху по центру</li>
+</ul>
+
+<h3>3.3 Подсказка</h3>
+<ul>
+  <li>Слева внизу — миниатюрная схема управления (всегда видна для P1)</li>
+  <li>При vs AI — кнопки P2 скрыты</li>
+</ul>
+
+<!-- ════════════════ 4 ════════════════ -->
+<div class="divider"></div>
+<h2 id="s4">4. Карточки бойцов (ростер)</h2>
+
+<h3>4.1 Внешний вид</h3>
+<ul>
+  <li>Крупные карточки в грубом игровом стиле (вдохновение: CoD, Mortal Kombat)</li>
+  <li>Фото бойца (аватар из <code>/static/avatars/</code>)</li>
+  <li>Имя + эмодзи + страна</li>
+  <li>Тип бойца (Берсерк, Контроль, Танк и т.д.)</li>
+</ul>
+
+<h3>4.2 Статы (полоски)</h3>
+<table>
+  <tr><th>Стат</th><th>Иконка</th><th>Описание</th></tr>
+  <tr><td>HP</td><td>❤️</td><td>Здоровье (полоска)</td></tr>
+  <tr><td>ATK</td><td>⚔️</td><td>Атака (полоска)</td></tr>
+  <tr><td>DEF</td><td>🛡️</td><td>Защита (полоска)</td></tr>
+  <tr><td>SPD</td><td>⚡</td><td>Скорость (полоска)</td></tr>
+</table>
+<p>Цвет полосок = цвет бойца (поля <code>color</code> / <code>gradient</code> из fighters.py)</p>
+
+<h3>4.3 Данные из fighters.py</h3>
+<pre><code>{
+  "id", "name", "name_en", "country", "era", "type",
+  "bio", "taunt",
+  "hp", "atk", "def", "spd", "luck",
+  "weakness", "strength",
+  "weakness_meme", "strength_meme",
+  "color", "gradient", "emoji",
+  "moves": [
+    {"name", "type", "base_dmg", "accuracy", "desc", "effect?", "cooldown?"}
+  ]
+}</code></pre>
+
+<!-- ════════════════ 5 ════════════════ -->
+<div class="divider"></div>
+<h2 id="s5">5. Боевая механика</h2>
+
+<h3>5.1 Типы атак</h3>
+<table>
+  <tr><th>Тип</th><th>Клавиша (P1)</th><th>Множитель</th><th>Описание</th></tr>
+  <tr><td>Удар рукой</td><td><code>A</code> / <code>D</code></td><td>×1.0</td><td>Быстрый, точный</td></tr>
+  <tr><td>Удар ногой</td><td><code>W</code></td><td>×1.7</td><td>Мощный, медленнее</td></tr>
+  <tr><td>Блок</td><td><code>S</code></td><td>—</td><td>Поглощает удар (600мс)</td></tr>
+  <tr><td>Суперудар</td><td><code>F</code> / <code>Space</code></td><td>×2.5+</td><td>Именной удар, нужно комбо</td></tr>
+</table>
+
+<h3>5.2 Формула урона</h3>
+<pre><code>base_dmg = move.base_dmg + atk × 0.5 − enemy.def × 0.35
+dmg = base_dmg × множитель × rand(0.85, 1.15)
+
+if crit (12% + luck × 1.5%):  dmg ×= 1.6
+if combo × 2:                  dmg ×= 1.3
+if combo × 3:                  dmg ×= 1.6
+if counter (light>special>heavy>light): dmg ×= 1.3</code></pre>
+
+<h3 id="s5-3">5.3 Суперудары (Fatality-стиль)</h3>
+<ul>
+  <li>Активируются <strong>ТОЛЬКО при combo × 3</strong> (3 успешных удара подряд)</li>
+  <li>Каждый боец имеет именной суперудар (поле <code>ultimate</code> из moves)</li>
+  <li>При активации:
+    <ul>
+      <li>Крупный текстовый оверлей с названием удара (<em>"COVFEFE!"</em>, <em>"Мочить в сортире!"</em>)</li>
+      <li>Вспышка + анимация экрана (shake + flash)</li>
+      <li>Усиленный звуковой эффект</li>
+    </ul>
+  </li>
+</ul>
+
+<h4>Примеры суперударов</h4>
+<table>
+  <tr><th>Боец</th><th>Суперудар</th><th>Урон</th><th>Точность</th></tr>
+  <tr><td>🍊 Трумп</td><td>Украсть президента</td><td>55</td><td>65%</td></tr>
+  <tr><td>🐻 Путен</td><td>Опоздание на 4 часа</td><td>58</td><td>60%</td></tr>
+  <tr><td>😴 Байдон</td><td>(из fighters.py)</td><td>—</td><td>—</td></tr>
+</table>
+
+<h3 id="s5-4">5.4 Secret Combo (Mortal Kombat стиль)</h3>
+<ul>
+  <li>У каждого бойца — <strong>скрытая комбинация клавиш</strong> для мгновенного суперудара</li>
+  <li>Комбинация <strong>НЕ отображается</strong> в игре (отдельный сайт-справочник позже)</li>
+  <li>Примеры: <code>↓→↓→F</code>, <code>←→←→F</code>, <code>↑↓↑↓F</code></li>
+  <li>При правильном вводе — мгновенный суперудар <strong>без combo × 3</strong></li>
+</ul>
+
+<h3>5.5 Раунды</h3>
+<ul>
+  <li>3 раунда максимум</li>
+  <li>45 секунд на раунд</li>
+  <li>Таймер вышел → побеждает боец с бо́льшим HP</li>
+  <li>House edge: 70% побеждает объективно сильнейший, 30% — андердог</li>
+</ul>
+
+<h3>5.6 Counter System</h3>
+<p><code>light &gt; special &gt; heavy &gt; light</code> (камень-ножницы-бумага)<br>Контр-удар даёт <strong>×1.3</strong> бонус к урону.</p>
+
+<!-- ════════════════ 6 ════════════════ -->
+<div class="divider"></div>
+<h2 id="s6">6. Авторизация и пользователи</h2>
+
+<h3>6.1 Способы входа</h3>
+<table>
+  <tr><th>Способ</th><th>Реализация</th><th>Статус</th></tr>
+  <tr><td>Email + пароль</td><td>bcrypt</td><td><span class="badge badge-todo">TODO</span></td></tr>
+  <tr><td>Телефон + SMS</td><td>Twilio / Firebase Auth</td><td><span class="badge badge-todo">TODO</span></td></tr>
+  <tr><td>Google OAuth 2.0</td><td>Google API</td><td><span class="badge badge-todo">TODO</span></td></tr>
+  <tr><td>Telegram Login</td><td>Widget + HMAC</td><td><span class="badge badge-done">DONE</span></td></tr>
+</table>
+
+<!-- ════════════════ 7 ════════════════ -->
+<div class="divider"></div>
+<h2 id="s7">7. База данных — полная схема</h2>
+
+<h3>7.1 Существующие таблицы <span class="badge badge-done">DONE</span></h3>
+
+<div class="schema-block">
+<h4>users</h4>
+<pre><code>CREATE TABLE users (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  sid             TEXT UNIQUE NOT NULL,
+  email           TEXT UNIQUE,                 -- NEW
+  phone           TEXT UNIQUE,                 -- NEW
+  password_hash   TEXT,                        -- NEW (bcrypt)
+  google_id       TEXT UNIQUE,                 -- NEW
+  telegram_id     INTEGER UNIQUE,
+  telegram_name   TEXT,
+  telegram_user   TEXT,
+  telegram_photo  TEXT,
+  display_name    TEXT,                        -- NEW
+  avatar_url      TEXT,                        -- NEW
+  balance         INTEGER DEFAULT 100,
+  total_wins      INTEGER DEFAULT 0,
+  total_losses    INTEGER DEFAULT 0,
+  streak          INTEGER DEFAULT 0,
+  best_streak     INTEGER DEFAULT 0,
+  fights_today    INTEGER DEFAULT 0,
+  last_fight_date TEXT DEFAULT '',
+  last_daily_date TEXT DEFAULT '',
+  daily_streak    INTEGER DEFAULT 0,
+  referred_by     INTEGER,
+  referral_count  INTEGER DEFAULT 0,
+  favorite_fighters TEXT DEFAULT '[]',         -- NEW (JSON массив fighter ids)
+  is_premium      INTEGER DEFAULT 0,          -- NEW
+  premium_until   TEXT,                        -- NEW
+  created_at      INTEGER,
+  updated_at      INTEGER
+);</code></pre>
+</div>
+
+<div class="schema-block">
+<h4>fight_history</h4>
+<pre><code>CREATE TABLE fight_history (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id     INTEGER NOT NULL,
+  fight_id    TEXT NOT NULL,
+  fighter_a   TEXT NOT NULL,
+  fighter_b   TEXT NOT NULL,
+  winner_id   TEXT NOT NULL,
+  bet_fighter TEXT NOT NULL,
+  bet_amount  INTEGER DEFAULT 0,
+  payout      INTEGER DEFAULT 0,
+  bet_won     INTEGER DEFAULT 0,
+  created_at  INTEGER,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);</code></pre>
+</div>
+
+<div class="schema-block">
+<h4>daily_claims</h4>
+<pre><code>CREATE TABLE daily_claims (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id     INTEGER NOT NULL,
+  amount      INTEGER NOT NULL,
+  day_streak  INTEGER DEFAULT 1,
+  claimed_at  TEXT NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);</code></pre>
+</div>
+
+<div class="schema-block">
+<h4>referrals</h4>
+<pre><code>CREATE TABLE referrals (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  referrer_id   INTEGER NOT NULL,
+  referred_id   INTEGER NOT NULL,
+  bonus_amount  INTEGER DEFAULT 200,
+  created_at    INTEGER,
+  FOREIGN KEY (referrer_id) REFERENCES users(id),
+  FOREIGN KEY (referred_id) REFERENCES users(id)
+);</code></pre>
+</div>
+
+<h3>7.2 Новые таблицы <span class="badge badge-todo">TODO</span></h3>
+
+<div class="schema-block">
+<h4>transactions — токены / валюта</h4>
+<pre><code>CREATE TABLE transactions (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id       INTEGER NOT NULL,
+  type          TEXT NOT NULL,       -- 'purchase','spend','bonus','refund','win','loss'
+  amount        INTEGER NOT NULL,    -- +/- ₲
+  description   TEXT,
+  payment_id    TEXT,                -- внешний ID платёжной системы
+  created_at    INTEGER NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+CREATE INDEX idx_tx_user ON transactions(user_id);
+CREATE INDEX idx_tx_date ON transactions(created_at);</code></pre>
+</div>
+
+<div class="schema-block">
+<h4>payments — платежи (хранить 3 года)</h4>
+<pre><code>CREATE TABLE payments (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id        INTEGER NOT NULL,
+  provider       TEXT NOT NULL,       -- 'stripe','yookassa','crypto'
+  external_id    TEXT,
+  amount_cents   INTEGER NOT NULL,    -- сумма в копейках/центах
+  currency       TEXT DEFAULT 'RUB',
+  tokens_granted INTEGER NOT NULL,    -- сколько ₲ начислено
+  status         TEXT DEFAULT 'pending', -- 'pending','completed','refunded','failed'
+  metadata       TEXT,                -- JSON (receipt, etc.)
+  created_at     INTEGER NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+CREATE INDEX idx_pay_user ON payments(user_id);</code></pre>
+</div>
+
+<div class="schema-block">
+<h4>favorites — избранные бойцы</h4>
+<pre><code>CREATE TABLE favorites (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id    INTEGER NOT NULL,
+  fighter_id TEXT NOT NULL,
+  created_at INTEGER,
+  UNIQUE(user_id, fighter_id),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);</code></pre>
+</div>
+
+<div class="schema-block">
+<h4>sessions — сессии авторизации</h4>
+<pre><code>CREATE TABLE sessions (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id     INTEGER NOT NULL,
+  token       TEXT UNIQUE NOT NULL,
+  ip          TEXT,
+  user_agent  TEXT,
+  expires_at  INTEGER NOT NULL,
+  created_at  INTEGER NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+CREATE INDEX idx_sess_token ON sessions(token);</code></pre>
+</div>
+
+<div class="schema-block">
+<h4>audit_log — логи действий (хранить 3 года)</h4>
+<pre><code>CREATE TABLE audit_log (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id    INTEGER,
+  action     TEXT NOT NULL,          -- 'login','fight','purchase','admin_edit'
+  details    TEXT,                   -- JSON
+  ip         TEXT,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX idx_audit_user ON audit_log(user_id);
+CREATE INDEX idx_audit_date ON audit_log(created_at);</code></pre>
+</div>
+
+<h3>7.3 Политика хранения</h3>
+<table>
+  <tr><th>Таблица</th><th>Срок хранения</th><th>Очистка</th></tr>
+  <tr><td><code>payments</code></td><td><strong>3 года</strong> минимум</td><td>Не удалять</td></tr>
+  <tr><td><code>transactions</code></td><td><strong>3 года</strong> минимум</td><td>Не удалять</td></tr>
+  <tr><td><code>audit_log</code></td><td><strong>3 года</strong> минимум</td><td>Не удалять</td></tr>
+  <tr><td><code>fight_history</code></td><td>Бессрочно</td><td>Нужна для статистики</td></tr>
+  <tr><td><code>sessions</code></td><td>90 дней</td><td>Cron удаляет expired раз в сутки</td></tr>
+</table>
+
+<!-- ════════════════ 8 ════════════════ -->
+<div class="divider"></div>
+<h2 id="s8">8. Визуал и анимации</h2>
+
+<h3>8.1 Стиль: Horror</h3>
+<table>
+  <tr><th>Элемент</th><th>Значение</th></tr>
+  <tr><td>Основной фон</td><td><code>#0a0a0f</code> (почти чёрный)</td></tr>
+  <tr><td>Акцент 1</td><td><code>#8b0000</code> кроваво-красный</td></tr>
+  <tr><td>Акцент 2</td><td><code>#ff6b35</code> неоновый оранжевый</td></tr>
+  <tr><td>Акцент 3</td><td><code>#ffd700</code> золото</td></tr>
+  <tr><td>Шрифт</td><td>Грубый, угловатый ("Press Start 2P" / "Creepster")</td></tr>
+  <tr><td>Текстуры</td><td>Трещины, царапины, кровавые подтёки</td></tr>
+  <tr><td>Тени</td><td>Красные / оранжевые glow</td></tr>
+</table>
+
+<h3>8.2 Бойцы на арене</h3>
+<ul>
+  <li>CSS-анимации над круглыми фотографиями</li>
+  <li>Анимации: <code>punch-left</code>, <code>punch-right</code>, <code>kick</code>, <code>block</code>, <code>hit-flash</code>, <code>shake</code>, <code>golden-glow</code></li>
+  <li>Каждому типу атаки — своя анимация</li>
+  <li>Суперудар: полноэкранная вспышка + zoom + shake</li>
+</ul>
+
+<h3>8.3 Фоны арены</h3>
+<ul>
+  <li>Несколько фонов (изображения будут предоставлены)</li>
+  <li>Случайный выбор при начале боя</li>
+  <li>Примеры: Кремль, Белый дом, ООН, тёмная подворотня</li>
+</ul>
+
+<h3>8.4 Звуки</h3>
+<ul>
+  <li>Фоновая музыка (horror ambient)</li>
+  <li>Звуки ударов (рука, нога, блок)</li>
+  <li>Звук суперудара (эпичный)</li>
+  <li>Звук победы / поражения</li>
+  <li>Озвучка taunt бойца при победе</li>
+</ul>
+
+<!-- ════════════════ 9 ════════════════ -->
+<div class="divider"></div>
+<h2 id="s9">9. Таблица рекордов</h2>
+<ul>
+  <li>Отдельная страница <code>/leaderboard</code></li>
+  <li>Топ 100 игроков по количеству <strong>побед</strong></li>
+  <li>Колонки: #, Аватар, Никнейм, Побед, Лучшая серия, Баланс ₲</li>
+  <li>Обновляется в реальном времени</li>
+  <li>Текущая реализация: <code>GET /api/leaderboard</code> — расширить до 100</li>
+</ul>
+
+<!-- ════════════════ 10 ═══════════════ -->
+<div class="divider"></div>
+<h2 id="s10">10. Монетизация (токены ₲)</h2>
+
+<h3>10.1 Получение</h3>
+<table>
+  <tr><th>Источник</th><th>Сумма</th></tr>
+  <tr><td>Стартовый баланс</td><td>100₲</td></tr>
+  <tr><td>Ежедневный бонус</td><td>50—200₲ (серия)</td></tr>
+  <tr><td>Реферал (рефереру)</td><td>+200₲</td></tr>
+  <tr><td>Реферал (новому)</td><td>+100₲</td></tr>
+  <tr><td>Покупка за деньги</td><td>Stripe / ЮKassa</td></tr>
+  <tr><td>Победа в бою</td><td>×2 ставки</td></tr>
+</table>
+
+<h3>10.2 Трата</h3>
+<ul>
+  <li>Ставка на бой: 1—100₲</li>
+  <li>Spin Wheel (уже реализовано)</li>
+  <li>Будущее: кастомизация, скины, премиум-бойцы</li>
+</ul>
+
+<h3>10.3 Подписка (будущее)</h3>
+<ul>
+  <li>Доступ к истории боёв / статистике</li>
+  <li>Расширенная аналитика</li>
+  <li>Эксклюзивные бойцы</li>
+</ul>
+
+<!-- ════════════════ 11 ═══════════════ -->
+<div class="divider"></div>
+<h2 id="s11">11. Админка (будущее)</h2>
+<ul>
+  <li>Добавление / редактирование бойцов через веб-интерфейс</li>
+  <li>Управление пользователями</li>
+  <li>Просмотр транзакций и платежей</li>
+  <li>Модерация</li>
+</ul>
+
+<!-- ════════════════ 12 ═══════════════ -->
+<div class="divider"></div>
+<h2 id="s12">12. API эндпоинты</h2>
+
+<h3>12.1 Существующие <span class="badge badge-done">DONE</span></h3>
+<table>
+  <tr><th>Метод</th><th>URL</th><th>Описание</th></tr>
+  <tr><td><code>GET</code></td><td><code>/</code></td><td>Главная страница</td></tr>
+  <tr><td><code>GET</code></td><td><code>/fight</code></td><td>Страница арены</td></tr>
+  <tr><td><code>GET</code></td><td><code>/api/fighters</code></td><td>Список бойцов (без moves)</td></tr>
+  <tr><td><code>GET</code></td><td><code>/api/fighters/{id}</code></td><td>Полные данные бойца (с moves)</td></tr>
+  <tr><td><code>GET</code></td><td><code>/api/auth/me</code></td><td>Текущий пользователь</td></tr>
+  <tr><td><code>POST</code></td><td><code>/api/auth/telegram</code></td><td>Telegram Login</td></tr>
+  <tr><td><code>POST</code></td><td><code>/api/daily</code></td><td>Ежедневный бонус</td></tr>
+  <tr><td><code>POST</code></td><td><code>/api/referral</code></td><td>Реферальный код</td></tr>
+  <tr><td><code>GET</code></td><td><code>/api/leaderboard</code></td><td>Таблица рекордов</td></tr>
+  <tr><td><code>POST</code></td><td><code>/api/spin</code></td><td>Spin Wheel</td></tr>
+  <tr><td><code>POST</code></td><td><code>/api/fight/start</code></td><td>Начало боя</td></tr>
+  <tr><td><code>POST</code></td><td><code>/api/fight/round</code></td><td>Ход раунда</td></tr>
+  <tr><td><code>GET</code></td><td><code>/api/wallet</code></td><td>Баланс + история</td></tr>
+  <tr><td><code>POST</code></td><td><code>/api/wallet/deposit</code></td><td>Пополнение (dev)</td></tr>
+</table>
+
+<h3>12.2 Новые <span class="badge badge-todo">TODO</span></h3>
+<table>
+  <tr><th>Метод</th><th>URL</th><th>Описание</th></tr>
+  <tr><td><code>POST</code></td><td><code>/api/auth/register</code></td><td>Регистрация email/телефон</td></tr>
+  <tr><td><code>POST</code></td><td><code>/api/auth/login</code></td><td>Вход email/телефон</td></tr>
+  <tr><td><code>POST</code></td><td><code>/api/auth/google</code></td><td>Google OAuth</td></tr>
+  <tr><td><code>POST</code></td><td><code>/api/auth/logout</code></td><td>Выход</td></tr>
+  <tr><td><code>GET</code></td><td><code>/api/favorites</code></td><td>Список избранных бойцов</td></tr>
+  <tr><td><code>POST</code></td><td><code>/api/favorites/{id}</code></td><td>Добавить в избранное</td></tr>
+  <tr><td><code>DELETE</code></td><td><code>/api/favorites/{id}</code></td><td>Убрать из избранного</td></tr>
+  <tr><td><code>POST</code></td><td><code>/api/payments/create</code></td><td>Создание платежа</td></tr>
+  <tr><td><code>POST</code></td><td><code>/api/payments/webhook</code></td><td>Webhook от платёжки</td></tr>
+  <tr><td><code>GET</code></td><td><code>/leaderboard</code></td><td>Страница рекордов (HTML)</td></tr>
+</table>
+
+<!-- ════════════════ 13 ═══════════════ -->
+<div class="divider"></div>
+<h2 id="s13">13. Структура файлов</h2>
+
+<pre><code>game/
+├── __init__.py
+├── server.py          # FastAPI роуты
+├── engine.py          # Боевой движок (формулы, AI, раунды)
+├── fighters.py        # 44 бойца с данными
+├── db.py              # SQLite CRUD
+├── arena.db           # Файл БД
+├── static/
+│   ├── app.js         # JS лобби / главная
+│   ├── fight.js       # JS боевого движка (фронт)
+│   ├── fight.css      # Стили арены
+│   ├── style.css      # Общие стили
+│   ├── audio.js       # Звуковой движок
+│   ├── avatars/       # Фото бойцов .png / .svg
+│   └── sounds/        # Звуковые файлы
+├── templates/
+│   ├── index.html     # Главная
+│   ├── fight.html     # Арена
+│   └── leaderboard.html  # Рекорды (NEW)
+</code></pre>
+
+<!-- ════════════════ 14 ═══════════════ -->
+<div class="divider"></div>
+<h2 id="s14">14. Приоритеты разработки</h2>
+
+<div class="phase">
+  <div class="phase-title">Фаза 1 — MVP (текущая)</div>
+  <ul>
+    <li><span class="done">✅</span> Бойцы с данными (44 шт) — <code>fighters.py</code></li>
+    <li><span class="done">✅</span> Боевой движок — <code>engine.py</code></li>
+    <li><span class="done">✅</span> API сервер — <code>server.py</code></li>
+    <li><span class="done">✅</span> БД users / fights / daily / referrals — <code>db.py</code></li>
+    <li><span class="wip">🔧</span> Fight UI (fight.html + fight.js + fight.css) — <strong>ИСПРАВИТЬ</strong></li>
+    <li><span class="wip">🔧</span> Крупные карточки со статами</li>
+    <li><span class="wip">🔧</span> Именные суперудары с анимацией</li>
+  </ul>
+</div>
+
+<div class="phase">
+  <div class="phase-title">Фаза 2 — Полировка</div>
+  <ul>
+    <li><span class="todo">⬚</span> Horror-стиль (CSS / шрифты / текстуры)</li>
+    <li><span class="todo">⬚</span> Звуки и музыка</li>
+    <li><span class="todo">⬚</span> Мобильные тач-кнопки</li>
+    <li><span class="todo">⬚</span> Разные фоны арены</li>
+    <li><span class="todo">⬚</span> Splash-экран загрузки</li>
+  </ul>
+</div>
+
+<div class="phase">
+  <div class="phase-title">Фаза 3 — Аккаунты и деньги</div>
+  <ul>
+    <li><span class="todo">⬚</span> Регистрация (email / телефон / Google)</li>
+    <li><span class="todo">⬚</span> Таблица рекордов (страница)</li>
+    <li><span class="todo">⬚</span> Избранные бойцы</li>
+    <li><span class="todo">⬚</span> Платёжная система (Stripe / ЮKassa)</li>
+    <li><span class="todo">⬚</span> Транзакции и аудит-лог</li>
+  </ul>
+</div>
+
+<div class="phase">
+  <div class="phase-title">Фаза 4 — Secret & Расширение</div>
+  <ul>
+    <li><span class="todo">⬚</span> Скрытые комбо-комбинации (Mortal Kombat)</li>
+    <li><span class="todo">⬚</span> Админка</li>
+    <li><span class="todo">⬚</span> Подписка</li>
+    <li><span class="todo">⬚</span> Интеграция с сервисом прогнозирования</li>
+  </ul>
+</div>
+
+<!-- ════════════════ 15 ═══════════════ -->
+<div class="divider"></div>
+<h2 id="s15">15. Деплой</h2>
+
+<h3>Текущее окружение</h3>
+<table>
+  <tr><th>Параметр</th><th>Значение</th></tr>
+  <tr><td>ОС</td><td>macOS</td></tr>
+  <tr><td>Веб-сервер</td><td>MAMP Pro — Apache + PHP 8.3</td></tr>
+  <tr><td>Document root</td><td><code>/Applications/MAMP/htdocs/stock-llm/public</code></td></tr>
+  <tr><td>Python-сервер</td><td>uvicorn на порту 8502</td></tr>
+</table>
+
+<h3>Рекомендация для продакшена</h3>
+<table>
+  <tr><th>Вариант</th><th>Описание</th><th>Цена</th></tr>
+  <tr><td><strong>Railway.app</strong></td><td>Проще всего для Python+FastAPI, автодеплой из GitHub</td><td>$5/мес</td></tr>
+  <tr><td><strong>Fly.io</strong></td><td>Docker-контейнеры, глобальные edge</td><td>$5/мес</td></tr>
+  <tr><td><strong>VPS + Nginx</strong></td><td>Ubuntu, Nginx reverse proxy → uvicorn</td><td>$5-15/мес</td></tr>
+</table>
+<ul>
+  <li>БД: SQLite для MVP → PostgreSQL при &gt;1000 юзеров</li>
+  <li>Статика: CDN (Cloudflare) перед сервером</li>
+  <li>HTTPS: Let's Encrypt через Nginx</li>
+</ul>
+
+<div class="divider"></div>
+<p style="text-align:center;color:#444;font-size:.8rem;margin-top:32px">
+  POLITICAL ARENA — ТЗ v1.0 · 11 апреля 2026 · Документ обновляется по мере разработки
+</p>
+
+</div>
+
+<script>
+// Smooth scroll + active nav
+document.querySelectorAll('.nav a').forEach(a=>{
+  a.addEventListener('click',e=>{
+    e.preventDefault();
+    const t=document.querySelector(a.getAttribute('href'));
+    if(t) t.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+});
+window.addEventListener('scroll',()=>{
+  const sections=[...document.querySelectorAll('h2[id]')];
+  const links=[...document.querySelectorAll('.nav a')];
+  let current='';
+  for(const s of sections){
+    if(s.getBoundingClientRect().top<120) current='#'+s.id;
+  }
+  links.forEach(l=>{l.classList.toggle('active',l.getAttribute('href')===current)});
+});
+</script>
+</body>
+</html>
