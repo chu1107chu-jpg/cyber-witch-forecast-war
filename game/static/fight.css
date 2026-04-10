@@ -1,5 +1,6 @@
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#0a0a0f;color:#fff;font-family:'Segoe UI',sans-serif;overflow:hidden;height:100vh}
+@import url('https://fonts.googleapis.com/css2?family=Creepster&family=Orbitron:wght@700;900&display=swap');
+body{background:#0a0a0f;color:#fff;font-family:'Orbitron','Segoe UI',sans-serif;overflow:hidden;height:100vh}
 
 /* ── SCREENS ── */
 .screen{display:none;flex-direction:column;width:100%;height:100vh}
@@ -215,3 +216,37 @@ body{background:#0a0a0f;color:#fff;font-family:'Segoe UI',sans-serif;overflow:hi
 /* === KICK ANIMATION === */
 @keyframes kick { 0%,100% { transform: translateY(0); } 40% { transform: translateY(-20px) scale(1.05); } }
 .kick-anim { animation: kick .2s ease-out; }
+
+/* ── HORROR ACCENTS ───────────────────────────────────── */
+.arena-title { font-family: 'Creepster', cursive !important; letter-spacing: 3px; }
+.hud-name    { font-family: 'Creepster', cursive; font-size: 1rem; text-shadow: 0 0 8px #8b0000; }
+.hp-bar-fill { box-shadow: 0 0 8px #8b0000; }
+.vs-badge    { font-family: 'Creepster', cursive; color: #8b0000 !important; text-shadow: 0 0 20px #8b0000, 0 0 40px #ff0000 !important; }
+.dmg-number  { font-family: 'Orbitron', monospace; font-weight: 900; text-shadow: 0 0 12px #8b0000, 0 0 24px rgba(139,0,0,.6); }
+.super-overlay { border: 2px solid #8b0000; box-shadow: 0 0 60px #8b0000 inset, 0 0 80px #8b0000; }
+.super-overlay-name { font-family: 'Creepster', cursive !important; font-size: 2.8rem !important; color: #ff2200 !important; text-shadow: 0 0 30px #ff0000, 0 0 60px #8b0000; }
+.result-screen { background: radial-gradient(ellipse at center, #1a0000 0%, #0a0a0f 100%); }
+#resultTitle   { font-family: 'Creepster', cursive; font-size: 3rem; color: #ff2200; text-shadow: 0 0 30px #8b0000; }
+
+/* ── ARENA BACKGROUNDS ────────────────────────────────── */
+.arena-bg-kremlin  { background: radial-gradient(ellipse at bottom,#3d0a0a 0%,#1a0508 40%,#0a0a0f 100%) !important; }
+.arena-bg-kremlin  #stage { background: linear-gradient(180deg,transparent 60%,rgba(180,20,20,.18) 100%); }
+
+.arena-bg-whitehouse { background: radial-gradient(ellipse at bottom,#0a1a3d 0%,#050d1f 40%,#0a0a0f 100%) !important; }
+.arena-bg-whitehouse #stage { background: linear-gradient(180deg,transparent 60%,rgba(30,80,200,.12) 100%); }
+
+.arena-bg-un  { background: radial-gradient(ellipse at bottom,#0a1f2d 0%,#050f18 40%,#0a0a0f 100%) !important; }
+.arena-bg-un  #stage { background: linear-gradient(180deg,transparent 60%,rgba(0,120,180,.12) 100%); }
+
+.arena-bg-street { background: radial-gradient(ellipse at bottom,#1a1a0a 0%,#0f0f08 40%,#0a0a0f 100%) !important; }
+.arena-bg-street #stage { background: linear-gradient(180deg,transparent 60%,rgba(255,200,0,.08) 100%); }
+
+.arena-bg-cyber { background: radial-gradient(ellipse at bottom,#1a0a2e 0%,#0d0618 40%,#0a0a0f 100%) !important; }
+.arena-bg-cyber #stage { background: linear-gradient(180deg,transparent 60%,rgba(150,0,255,.14) 100%); }
+
+.arena-bg-kremlin::before,.arena-bg-whitehouse::before,.arena-bg-un::before,.arena-bg-street::before,.arena-bg-cyber::before {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E");
+  z-index:0;
+}
+#screenArena.arena-bg-kremlin,#screenArena.arena-bg-whitehouse,#screenArena.arena-bg-un,#screenArena.arena-bg-street,#screenArena.arena-bg-cyber { position:relative; }

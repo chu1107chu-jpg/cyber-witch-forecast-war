@@ -136,6 +136,13 @@ function setupHUD() {
     specBtn.classList.remove('ready');
   });
   $('#roundLabel').textContent = `РАУНД ${round}`;
+  // Random arena background
+  const _bgs = ['arena-bg-kremlin','arena-bg-whitehouse','arena-bg-un','arena-bg-street','arena-bg-cyber'];
+  const _arenaEl = document.getElementById('screenArena');
+  if (_arenaEl) {
+    _bgs.forEach(c => _arenaEl.classList.remove(c));
+    _arenaEl.classList.add(_bgs[Math.floor(Math.random() * _bgs.length)]);
+  }
 }
 
 // ── TIMER ───────────────────────────────────────────────
