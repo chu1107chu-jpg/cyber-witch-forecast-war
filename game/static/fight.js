@@ -123,6 +123,7 @@ function makeState(f) {
 }
 
 function setupHUD() {
+  AudioEngine.startBg();
   ['A','B'].forEach(side => {
     const s = gs[side];
     $(`#hudAvatar${side}`).src = s.avatar;
@@ -152,7 +153,8 @@ function startTimer() {
     if (paused || gs?.winner) return;
     timeLeft--;
     $('#timerLabel').textContent = timeLeft;
-    if (timeLeft <= 0) timeoutEnd();
+    if (timeLeft <= 5 && timeLeft > 0) AudioEngine.countdown();
+    if (timeLeft <= 0) { AudioEngine.countdownGo(); timeoutEnd(); }
   }, 1000);
 }
 
@@ -192,12 +194,14 @@ function doPunch(atk, def, mult, anim) {
   imgA.classList.add(anim);
   setTimeout(() => imgA.classList.remove(anim), 300);
   if (d.blocking) {
+    AudioEngine.block();
     showDmgNumber(def, 'БЛОК!', '#4af', 0);
     logMove(`🛡️ ${d.name} заблокировал удар!`);
     return;
   }
   const rand = 0.82 + Math.random() * 0.36;
   const dmg = Math.max(1, Math.round(a.atk * mult * rand - d.def * 0.3));
+  if (mult >= 1.5) AudioEngine.kick(); else AudioEngine.punch();
   d.hp = Math.max(0, d.hp - dmg);
   // Combo
   a.combo = Math.min(a.combo + 1, 3);
@@ -242,6 +246,8 @@ function doSpecial(atk, def) {
   updateComboBar(atk);
   $(`#specCtrl${atk}`).classList.remove('ready');
   const move = a.ultimate;
+  AudioEngine.special();
+  AudioEngine.special();
   showSuperOverlay(a, move.name || 'СУПЕРУДАР', move.desc || '');
   const d = gs[def];
   const rand = 0.9 + Math.random() * 0.2;
@@ -351,6 +357,7 @@ function endFight(winner) {
     backToRoster(); return;
   }
   gs.winner = winner;
+  AudioEngine.win();
   const w = gs[winner];
   const l = gs[winner === 'A' ? 'B' : 'A'];
   $('#resultTitle').textContent = '🏆 ПОБЕДА!';
@@ -363,6 +370,8 @@ function endFight(winner) {
 }
 
 function backToRoster() {
+  AudioEngine.stopBg();
+  AudioEngine.stopBg();
   gs = null;
   clearInterval(timerInterval);
   if (aiTimeout) clearTimeout(aiTimeout);
