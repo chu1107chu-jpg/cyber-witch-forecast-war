@@ -187,3 +187,21 @@ class SoundEngine {
 
 // Global singleton
 const sfx = new SoundEngine();
+// AudioEngine compatibility layer for fight3d.js
+const AudioEngine = {
+  _s(fn) { try { sfx.ensure(); fn(); } catch(e) {} },
+  uiClick()     { this._s(() => sfx.click()); },
+  punch()       { this._s(() => sfx.hit()); },
+  heavyPunch()  { this._s(() => sfx.crit()); },
+  kick()        { this._s(() => sfx.hit()); },
+  block()       { this._s(() => sfx.block()); },
+  special()     { this._s(() => sfx.combo()); },
+  crit()        { this._s(() => sfx.crit()); },
+  win()         { this._s(() => sfx.victory()); },
+  lose()        { this._s(() => sfx.defeat()); },
+  countdown()   { this._s(() => sfx.countdown()); },
+  countdownGo() { this._s(() => sfx.countdownGo()); },
+  startBg()     { },
+  stopBg()      { },
+  toggle()      { sfx.enabled = !sfx.enabled; }
+};

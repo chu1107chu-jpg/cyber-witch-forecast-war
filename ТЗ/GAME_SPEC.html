@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>POLITICAL ARENA — ТЗ v1.0</title>
+<title>POLITICAL ARENA — ТЗ v1.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#0a0a0f;color:#ccc;font-family:'Segoe UI',system-ui,sans-serif;line-height:1.7}
@@ -72,6 +72,12 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
     <li class="sub"><a href="#s10-5">10.5 Платёжная система</a></li>
     <li class="sub"><a href="#s10-6">10.6 API платежей</a></li>
     <li class="sub"><a href="#s10-7">10.7 Вебхук</a></li>
+    <li class="sub"><a href="#s10-8">10.8 Личный кабинет игрока</a></li>
+    <li class="sub"><a href="#s10-9">10.9 Две валюты: Tokens + Influence</a></li>
+    <li class="sub"><a href="#s10-10">10.10 Коалиции</a></li>
+    <li class="sub"><a href="#s10-11">10.11 Общая карта и территории</a></li>
+    <li class="sub"><a href="#s10-12">10.12 VIP / Secret бойцы</a></li>
+    <li class="sub"><a href="#s10-13">10.13 Мини-игры и азартные режимы</a></li>
     <li><a href="#s11">11. Админка</a></li>
     <li><a href="#s12">12. Все API</a></li>
     <li><a href="#s13">13. Структура файлов</a></li>
@@ -81,12 +87,12 @@ tr:nth-child(even) td{background:rgba(255,255,255,.02)}
 </nav>
 <div class="topbar">
   <div class="topbar-title">POLITICAL ARENA — ТЗ</div>
-  <div class="topbar-date">v1.0 · 11 апреля 2026</div>
+  <div class="topbar-date">v1.1 · 12 апреля 2026</div>
 </div>
 <div class="main">
 
 <h1>🎮 POLITICAL ARENA</h1>
-<p class="sub">Техническое задание v1.0 · cyber-witch-forecast-war</p>
+<p class="sub">Техническое задание v1.1 · cyber-witch-forecast-war</p>
 
 <div class="divider"></div>
 <h2 id="s1">1. Общее описание и стек</h2>
@@ -369,6 +375,159 @@ async def yookassa_webhook(request: Request):
     return {"ok": True}</code></pre>
 <div class="gbox">💡 <strong>Идемпотентность критична.</strong> Платёжка может прислать вебхук 2-3 раза. Всегда проверяй <code>external_id</code> на дублирование перед начислением ₲.</div>
 
+
+<h3 id="s10-8">10.8 Личный кабинет игрока</h3>
+<div class="hbox">
+  <strong>Личный кабинет</strong> — обязательный мета-экран игры. В нём хранится прогресс игрока, кошелёк, история боёв, история захватов, коалиция, VIP-бойцы и достижения.
+</div>
+<table>
+  <tr><th>Раздел</th><th>Что показывать</th></tr>
+  <tr><td>Профиль</td><td>Ник, аватар, дата регистрации, любимый боец, текущая коалиция, статус онлайн</td></tr>
+  <tr><td>Боевая статистика</td><td>Всего боёв, победы, поражения, винрейт, стрик, лучший боец, любимый супер-удар</td></tr>
+  <tr><td>Кошелёк</td><td>Баланс ₲, баланс Influence, последние транзакции, сезонные награды</td></tr>
+  <tr><td>История боёв</td><td>Дата, режим, бойцы, результат, ставка, выплата, длительность, использованный супер</td></tr>
+  <tr><td>Коалиция</td><td>Название, тег, роль, состав, вклад, территории, рейтинг</td></tr>
+  <tr><td>История захватов</td><td>Территория, дата, атака/защита, вклад очков, результат, коалиция</td></tr>
+  <tr><td>VIP / Secret</td><td>Открытые секретные бойцы, прогресс по закрытым, условия разблокировки</td></tr>
+</table>
+<h4>Новые страницы кабинета</h4>
+<pre><code>/profile
+/profile/fights
+/profile/transactions
+/profile/coalition
+/profile/territories
+/profile/vip</code></pre>
+
+<h3 id="s10-9">10.9 Две валюты: Tokens + Influence</h3>
+<div class="wbox">⚠️ <strong>Важно:</strong> общую карту и территории нельзя завязывать напрямую на казино-удачу. Поэтому вводятся <strong>две отдельные валюты</strong>.</div>
+<table>
+  <tr><th>Валюта</th><th>Назначение</th><th>Где тратится</th></tr>
+  <tr><td><strong>₲ Tokens</strong></td><td>Мягкая внутриигровая экономика</td><td>Ставки, мини-игры, скины, VIP-кейсы, создание коалиции, кастомизация</td></tr>
+  <tr><td><strong>Influence</strong></td><td>Военная/сезонная валюта</td><td>Атака территорий, защита территорий, коалиционные апгрейды, сезонная война</td></tr>
+</table>
+<h4>Источники Tokens</h4>
+<ul>
+  <li>Победы в боях, daily bonus, referrals, мини-игры, сезонные награды, удержание территорий</li>
+</ul>
+<h4>Источники Influence</h4>
+<ul>
+  <li>Победы в боях, участие в коалиции, защита/захват территорий, специальные события</li>
+</ul>
+<div class="schema">
+<h4>Новые таблицы экономики</h4>
+<pre><code>wallet_transactions  — история всех движений Tokens и Influence
+player_activity_log  — журнал значимых действий игрока
+mini_game_sessions   — игровые сессии мини-игр
+mini_game_bets       — ставки и результаты</code></pre>
+</div>
+
+<h3 id="s10-10">10.10 Коалиции</h3>
+<p>Коалиция — социальная единица войны за карту. <strong>Игрок не выбирает коалицию при регистрации</strong>. Сначала он регистрируется свободным, затем может вступить, подать заявку или создать свою.</p>
+<table>
+  <tr><th>Тип коалиции</th><th>Правило входа</th></tr>
+  <tr><td><code>open</code></td><td>Моментальное вступление</td></tr>
+  <tr><td><code>approval</code></td><td>Подача заявки → одобрение лидером/офицером</td></tr>
+  <tr><td><code>invite_only</code></td><td>Только по приглашению</td></tr>
+</table>
+<h4>Роли</h4>
+<ul>
+  <li><strong>leader</strong> — лидер, полные права</li>
+  <li><strong>officer</strong> — может принимать заявки, кикать участников, управлять активностями</li>
+  <li><strong>member</strong> — базовый участник</li>
+</ul>
+<h4>Правила</h4>
+<ul>
+  <li>1 игрок = 1 коалиция</li>
+  <li>Сменить коалицию можно, но после выхода включается кулдаун 24–72 часа</li>
+  <li>Лидер перед выходом обязан передать лидерство</li>
+  <li>Сезонные награды выдаются только активным участникам</li>
+</ul>
+<div class="schema">
+<h4>Таблицы коалиций</h4>
+<pre><code>coalitions             — коалиции
+coalition_members      — участники и роли
+coalition_applications — заявки на вступление
+coalition_invites      — приглашения
+coalition_logs         — журнал действий коалиции</code></pre>
+</div>
+
+<h3 id="s10-11">10.11 Общая карта и территории</h3>
+<div class="hbox">
+  Карта <strong>общая для всех игроков</strong>. Территория принадлежит не игроку, а <strong>коалиции</strong>. Игроки не занимают «слоты земли», а вносят вклад в её атаку или защиту.
+</div>
+<h4>Стартовый MVP карты</h4>
+<ul>
+  <li>3 территории: <em>Северный фронтир</em>, <em>Центральный сектор</em>, <em>Южный бастион</em></li>
+  <li>У каждой территории есть: владелец, шкала контроля, защита, бонус и журнал событий</li>
+</ul>
+<h4>Логика захвата</h4>
+<ul>
+  <li>Игрок тратит <strong>Influence</strong> на атаку или защиту</li>
+  <li>Территория имеет шкалу контроля 0–100</li>
+  <li>При достижении порога территория меняет владельца</li>
+  <li>Владелец получает бонусы к сезону, экономике или защите</li>
+</ul>
+<table>
+  <tr><th>Сущность</th><th>Описание</th></tr>
+  <tr><td>Территория</td><td>Сектор карты с владельцем и бонусом</td></tr>
+  <tr><td>Атака</td><td>Вклад игрока/коалиции в захват сектора</td></tr>
+  <tr><td>Защита</td><td>Вклад владельца в удержание сектора</td></tr>
+  <tr><td>Сезон</td><td>Период войны, после которого выдаются награды и карта частично/полностью сбрасывается</td></tr>
+</table>
+<div class="schema">
+<h4>Таблицы карты</h4>
+<pre><code>territories         — список территорий и текущий владелец
+territory_events    — история атак, защит, захватов, потерь
+territory_seasons   — сезоны и итоги войны</code></pre>
+</div>
+
+<h3 id="s10-12">10.12 VIP / Secret бойцы</h3>
+<p>Часть существующих бойцов переводится в категории <strong>locked</strong>, <strong>vip</strong> или <strong>seasonal</strong>. Они скрыты в ростере до выполнения условий и отображаются как силуэт / <code>???</code>.</p>
+<table>
+  <tr><th>Категория</th><th>Описание</th><th>Как открыть</th></tr>
+  <tr><td><code>base</code></td><td>Доступен сразу</td><td>Без условий</td></tr>
+  <tr><td><code>unlockable</code></td><td>Обычный скрытый боец</td><td>За достижения / количество боёв / победы</td></tr>
+  <tr><td><code>vip</code></td><td>Редкий или скрытый правитель</td><td>Награда сезона, коалиции, кейса или особого достижения</td></tr>
+  <tr><td><code>seasonal</code></td><td>Временный боец</td><td>Только в сезон или ивент</td></tr>
+</table>
+<h4>Принципы баланса</h4>
+<ul>
+  <li>VIP-бойцы не должны ломать баланс: +5–12% силы максимум, упор на уникальность и визуал</li>
+  <li>Должен существовать гарантированный путь открытия и редкий шанс открыть раньше</li>
+  <li>В ростере для закрытых бойцов показывать условие или прогресс открытия</li>
+</ul>
+<div class="schema">
+<h4>Данные бойца / игрока</h4>
+<pre><code>fighter.unlock_type
+fighter.unlock_condition
+fighter.is_hidden
+fighter.is_vip
+fighter.season_only
+
+player_unlocked_fighters — какие бойцы уже открыты игроком
+player_fighter_progress  — прогресс по условиям разблокировки</code></pre>
+</div>
+
+<h3 id="s10-13">10.13 Мини-игры и азартные режимы</h3>
+<p>Мини-игры работают на <strong>₲ Tokens</strong>, а не на владение картой. Территории напрямую в казино <strong>не ставятся</strong>.</p>
+<table>
+  <tr><th>Режим</th><th>Валюта</th><th>Статус</th></tr>
+  <tr><td>Spin Wheel</td><td>₲ Tokens</td><td><span class="badge bd">DONE</span></td></tr>
+  <tr><td>Coinflip</td><td>₲ Tokens</td><td><span class="badge bt">TODO</span></td></tr>
+  <tr><td>Dice</td><td>₲ Tokens</td><td><span class="badge bt">TODO</span></td></tr>
+  <tr><td>Slots</td><td>₲ Tokens</td><td><span class="badge bt">TODO</span></td></tr>
+  <tr><td>Crash / Jackpot</td><td>₲ Tokens</td><td><span class="badge bt">TODO</span></td></tr>
+</table>
+<h4>Правила мини-игр</h4>
+<ul>
+  <li>Каждая ставка логируется</li>
+  <li>Есть честный результат / seed / идемпотентность</li>
+  <li>Мини-игры могут давать Tokens, VIP-кейсы, бустеры, иногда немного Influence</li>
+  <li>Мини-игры не должны напрямую отдавать территорию или право владения картой</li>
+</ul>
+<div class="gbox">💡 <strong>Рекомендуемая модель:</strong> Tokens = казино/ставки/кастомизация, Influence = война/территории/коалиции. Это разделение обязательно для баланса.</div>
+
+
 <div class="divider"></div>
 <h2 id="s11">11. Админка (Фаза 4)</h2>
 <ul>
@@ -416,6 +575,21 @@ async def yookassa_webhook(request: Request):
   <tr><td><code>POST</code></td><td><code>/api/payments/webhook/yookassa</code></td><td>Вебхук ЮKassa</td></tr>
   <tr><td><code>POST</code></td><td><code>/api/payments/webhook/stripe</code></td><td>Вебхук Stripe</td></tr>
   <tr><td><code>GET</code></td><td><code>/api/wallet/transactions</code></td><td>История движений ₲</td></tr>
+  <tr><td><code>GET</code></td><td><code>/api/profile</code></td><td>Личный кабинет игрока</td></tr>
+  <tr><td><code>GET</code></td><td><code>/api/history/fights</code></td><td>Полная история боёв</td></tr>
+  <tr><td><code>GET</code></td><td><code>/api/history/territories</code></td><td>История атак / защит / захватов</td></tr>
+  <tr><td><code>GET</code></td><td><code>/api/coalitions</code></td><td>Список коалиций</td></tr>
+  <tr><td><code>POST</code></td><td><code>/api/coalitions</code></td><td>Создать коалицию</td></tr>
+  <tr><td><code>POST</code></td><td><code>/api/coalitions/join</code></td><td>Вступить / отправить заявку</td></tr>
+  <tr><td><code>POST</code></td><td><code>/api/coalitions/leave</code></td><td>Покинуть коалицию</td></tr>
+  <tr><td><code>GET</code></td><td><code>/api/territories</code></td><td>Список территорий на общей карте</td></tr>
+  <tr><td><code>POST</code></td><td><code>/api/territories/attack</code></td><td>Внести очки атаки Influence</td></tr>
+  <tr><td><code>POST</code></td><td><code>/api/territories/defend</code></td><td>Внести очки защиты Influence</td></tr>
+  <tr><td><code>GET</code></td><td><code>/api/minigames/history</code></td><td>История азартных мини-игр</td></tr>
+  <tr><td><code>POST</code></td><td><code>/api/coinflip</code></td><td>Монетка на Tokens</td></tr>
+  <tr><td><code>POST</code></td><td><code>/api/dice</code></td><td>Кости на Tokens</td></tr>
+  <tr><td><code>POST</code></td><td><code>/api/slots</code></td><td>Слоты на Tokens</td></tr>
+  <tr><td><code>GET</code></td><td><code>/api/fighters/locked</code></td><td>Список скрытых/VIP бойцов и прогресс</td></tr>
   <tr><td><code>GET</code></td><td><code>/leaderboard</code></td><td>Страница рекордов (HTML)</td></tr>
 </table>
 
@@ -464,9 +638,19 @@ async def yookassa_webhook(request: Request):
   <li><span class="todo">⬚</span> Избранные бойцы</li>
   <li><span class="todo">⬚</span> Покупка токенов (ЮKassa / Stripe)</li>
   <li><span class="todo">⬚</span> transactions + payments + audit_log</li>
+  <li><span class="todo">⬚</span> Личный кабинет игрока + история транзакций</li>
 </ul></div>
-<div class="phase"><div class="pt">Фаза 4 — Расширение</div><ul>
+<div class="phase"><div class="pt">Фаза 4 — Социальный слой и карта</div><ul>
+  <li><span class="todo">⬚</span> Коалиции: создание / заявки / инвайты / роли</li>
+  <li><span class="todo">⬚</span> Общая карта на 3 территории</li>
+  <li><span class="todo">⬚</span> Захват / защита через Influence</li>
+  <li><span class="todo">⬚</span> История захватов и журнал коалиции</li>
+  <li><span class="todo">⬚</span> Сезоны и награды за удержание территорий</li>
+</ul></div>
+<div class="phase"><div class="pt">Фаза 5 — Расширение</div><ul>
   <li><span class="todo">⬚</span> Секретные комбо-комбинации (MK-стиль)</li>
+  <li><span class="todo">⬚</span> VIP / Secret бойцы и прогресс открытия</li>
+  <li><span class="todo">⬚</span> Мини-игры: coinflip / dice / slots / jackpot</li>
   <li><span class="todo">⬚</span> Админка</li>
   <li><span class="todo">⬚</span> Скины / кастомизация</li>
   <li><span class="todo">⬚</span> Интеграция с сервисом прогнозирования</li>
@@ -491,7 +675,7 @@ python3 -m uvicorn game.server:app --host 0.0.0.0 --port 8502 --reload</code></p
 <p>После запуска: <a href="http://localhost:8502">localhost:8502</a> — игра &nbsp;|&nbsp; <a href="http://localhost:8502/tz">localhost:8502/tz</a> — это ТЗ</p>
 
 <div class="divider"></div>
-<p style="text-align:center;color:#444;font-size:.78rem;padding-top:16px">POLITICAL ARENA — ТЗ v1.0 · 11 апреля 2026</p>
+<p style="text-align:center;color:#444;font-size:.78rem;padding-top:16px">POLITICAL ARENA — ТЗ v1.1 · 12 апреля 2026</p>
 </div>
 <script>
 document.querySelectorAll('.nav a').forEach(a=>{

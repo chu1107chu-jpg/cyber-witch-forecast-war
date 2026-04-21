@@ -151,7 +151,11 @@ def api_fighters():
 def api_fighter_detail(fighter_id: str):
     for f in FIGHTERS:
         if f["id"] == fighter_id:
-            return f
+            avatar_ext = "png" if os.path.exists(STATIC_DIR / "avatars" / f"{fighter_id}.png") else "jpg"
+            return {
+                **f,
+                "avatar": f.get("avatar") or f"/static/avatars/{fighter_id}.{avatar_ext}",
+            }
     raise HTTPException(404, "Fighter not found")
 
 # ── API: Auth ────────────────────────────────────────────

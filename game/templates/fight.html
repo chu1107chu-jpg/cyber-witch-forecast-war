@@ -1,155 +1,211 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>POLITICAL ARENA — FIGHT</title>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/fight.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Political Arena 3D</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Orbitron','Segoe UI',sans-serif}
+#gameCanvas{position:fixed;top:0;left:0;width:100%;height:100%;display:block}
+
+/* HUD */
+#hud{position:fixed;top:0;left:0;width:100%;pointer-events:none;z-index:10;padding:10px 12px}
+.hud-row{display:flex;align-items:flex-start;gap:8px}
+.hud-fighter{flex:1;display:flex;flex-direction:column;gap:4px}
+.hud-fighter.right{align-items:flex-end}
+.hud-name{font-size:clamp(9px,2.5vw,13px);font-weight:700;color:#fff;text-shadow:0 0 8px #000;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px}
+.hud-avatar{width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.22);box-shadow:0 0 10px rgba(255,255,255,.12);background:#111}
+.hud-bar-track{width:100%;max-width:180px;height:14px;background:rgba(0,0,0,.5);border-radius:7px;overflow:hidden;border:1px solid rgba(255,255,255,.15)}
+.hud-bar-fill{height:100%;border-radius:7px;transition:width .15s;background:linear-gradient(90deg,#e63946,#ff6b35)}
+.right .hud-bar-track{margin-left:auto}
+.right .hud-bar-fill{float:right}
+.combo-badge{font-size:11px;font-weight:900;color:#ffd700;text-shadow:0 0 8px #ffd700;min-height:16px}
+.right .combo-badge{text-align:right}
+.hud-center{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:60px}
+#timerBox{background:rgba(0,0,0,.7);border:2px solid #555;border-radius:8px;padding:2px 10px;font-size:clamp(18px,5vw,28px);font-weight:900;color:#fff;line-height:1.2;text-align:center}
+#timerBox.urgent{color:#e63946;border-color:#e63946;animation:urgentPulse .5s infinite alternate}
+@keyframes urgentPulse{from{box-shadow:0 0 0 #e63946}to{box-shadow:0 0 12px #e63946}}
+#roundLabel{font-size:10px;color:#aaa;letter-spacing:2px}
+
+/* SCREENS */
+.screen{position:fixed;inset:0;z-index:20;display:none;flex-direction:column;align-items:center;justify-content:center}
+.screen.active{display:flex}
+#screenRoster{background:radial-gradient(ellipse at center,#1a0a2e 0%,#0a0a0f 100%);overflow-y:auto}
+.arena-title{font-family:'Creepster',cursive,'Orbitron',sans-serif;font-size:clamp(1.4rem,5vw,2.4rem);background:linear-gradient(135deg,#ff6b35,#ffd700);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:3px;margin-bottom:16px}
+.pick-row{display:flex;align-items:center;gap:16px;width:100%;max-width:600px;padding:0 16px;margin-bottom:12px}
+.pick-slot{flex:1;background:rgba(255,255,255,.05);border:2px solid #333;border-radius:14px;padding:12px;text-align:center;transition:border-color .2s}
+.pick-slot.selected{border-color:#ffd700}
+.pick-avatar{width:64px;height:64px;border-radius:50%;background:#222;margin:0 auto 6px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:1.8rem}
+.pick-avatar img{width:100%;height:100%;object-fit:cover}
+.pick-label{font-size:9px;color:#888;letter-spacing:2px;margin-bottom:6px}
+.pick-name{font-size:12px;color:#ddd}
+.vs-badge{font-size:2rem;font-weight:900;color:#8b0000;text-shadow:0 0 20px #ff0000}
+.roster-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;width:100%;max-width:800px;padding:0 12px;max-height:40vh;overflow-y:auto}
+.roster-card{background:rgba(255,255,255,.06);border:2px solid #333;border-radius:10px;padding:6px 4px;text-align:center;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.roster-card:active,.roster-card:hover{border-color:#ffd700;transform:scale(1.05)}
+.roster-card.sel-a{border-color:#4af;box-shadow:0 0 10px #4af4}
+.roster-card.sel-b{border-color:#fa4;box-shadow:0 0 10px #fa44}
+.roster-card img{width:46px;height:46px;border-radius:50%;object-fit:cover}
+.roster-card .card-name{font-size:9px;margin-top:3px;color:#ccc}
+.mode-row{display:flex;gap:10px;margin-bottom:12px}
+.btn-mode{padding:6px 18px;border:2px solid #555;background:transparent;color:#aaa;border-radius:20px;cursor:pointer;font-size:12px}
+.btn-mode.active{border-color:#ffd700;color:#ffd700}
+.btn-start{padding:12px 40px;font-size:1.1rem;font-weight:700;background:linear-gradient(135deg,#ff6b35,#ffd700);border:none;border-radius:30px;color:#000;cursor:pointer;letter-spacing:2px;margin-top:12px;-webkit-tap-highlight-color:transparent}
+.btn-start:disabled{opacity:.4;cursor:not-allowed}
+
+/* RESULT */
+#screenResult{background:radial-gradient(ellipse at center,#200000 0%,#0a0a0f 100%)}
+#resultTitle{font-family:'Creepster',cursive;font-size:clamp(2.5rem,10vw,5rem);color:#ff2200;text-shadow:0 0 30px #8b0000;margin-bottom:12px}
+#resultAvatar{width:100px;height:100px;border-radius:50%;border:3px solid #8b0000;object-fit:cover;margin-bottom:10px}
+#resultName{font-size:1.3rem;font-weight:700;color:#ffd700;margin-bottom:6px}
+#resultTaunt{font-size:14px;color:#aaa;font-style:italic;margin-bottom:16px;max-width:300px;text-align:center}
+.result-btns{display:flex;gap:12px}
+.btn-secondary{padding:10px 24px;background:rgba(255,255,255,.1);border:2px solid #555;color:#fff;border-radius:20px;cursor:pointer;font-size:14px}
+.btn-primary{padding:10px 24px;background:linear-gradient(135deg,#ff6b35,#ffd700);border:none;border-radius:20px;color:#000;font-weight:700;cursor:pointer;font-size:14px}
+
+/* ROUND BREAK OVERLAY */
+#roundBreak{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.7);display:none;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+#roundBreak.show{display:flex}
+#roundBreakTitle{font-family:'Orbitron',monospace;font-size:clamp(2rem,10vw,5rem);color:#ffd700;text-shadow:0 0 30px #ffd700;animation:rbPop .3s ease-out}
+@keyframes rbPop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* SUPER OVERLAY */
+#superOverlay{position:fixed;inset:0;z-index:25;background:rgba(139,0,0,.85);display:none;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+#superOverlay.show{display:flex;animation:superFlash .1s ease-out}
+@keyframes superFlash{from{opacity:0}to{opacity:1}}
+#superMoveName{font-family:'Creepster',cursive;font-size:clamp(2rem,10vw,4.5rem);color:#fff;text-shadow:0 0 30px #ff6600;letter-spacing:4px;animation:superZoom .4s ease-out}
+#superFighterName{font-size:1rem;color:#ffcc00;letter-spacing:3px;margin-bottom:8px}
+#superMoveDesc{font-size:14px;color:#ffaaaa;max-width:300px;text-align:center}
+@keyframes superZoom{from{transform:scale(0.3);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* TOUCH CONTROLS */
+#touchControls{position:fixed;bottom:0;left:0;width:100%;z-index:15;pointer-events:none;padding:8px 12px 20px;display:flex;justify-content:flex-start;align-items:flex-end;gap:12px}
+.touch-left,.touch-right{display:flex;flex-direction:column;gap:6px;pointer-events:auto}
+.touch-left{flex-direction:row;align-items:flex-end;gap:6px}
+.touch-right{align-items:flex-start}
+.touch-row{display:flex;gap:6px}
+.tbtn{width:56px;height:56px;border-radius:50%;border:2px solid rgba(255,255,255,.3);background:rgba(0,0,0,.5);color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;backdrop-filter:blur(4px);transition:background .1s,transform .1s;font-family:'Segoe UI Emoji',sans-serif}
+.tbtn:active{background:rgba(255,255,255,.25);transform:scale(0.9)}
+.tbtn.super-btn{width:72px;height:72px;font-size:22px;background:rgba(139,0,0,.6);border-color:#ff4444;color:#fff}
+.tbtn.super-btn.ready{background:rgba(255,50,0,.8);box-shadow:0 0 16px #ff3300;animation:superReady .6s infinite alternate}
+@keyframes superReady{from{box-shadow:0 0 8px #ff3300}to{box-shadow:0 0 24px #ff3300}}
+.tbtn.block-btn{background:rgba(0,100,200,.4);border-color:#4af}
+
+/* PAUSE */
+#pauseBtn{position:fixed;top:10px;right:12px;z-index:15;width:36px;height:36px;background:rgba(0,0,0,.5);border:1px solid #555;border-radius:8px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+#pauseOverlay{position:fixed;inset:0;z-index:35;background:rgba(0,0,0,.8);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+#pauseOverlay.show{display:flex}
+#pauseOverlay h2{font-size:2rem;color:#ffd700}
+
+/* COMBO FLOAT */
+.combo-float{position:fixed;font-family:'Orbitron',monospace;font-weight:900;color:#ffd700;text-shadow:0 0 12px #ffd700;pointer-events:none;z-index:40;animation:cfloat .9s forwards}
+@keyframes cfloat{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-80px) scale(1.8)}}
+
+/* BLOOD CANVAS */
+#bloodCanvas{position:fixed;inset:0;pointer-events:none;z-index:12}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Creepster&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
 </head>
 <body>
 
-<!-- ═══ SETUP SCREEN ═══ -->
-<div class="screen active" id="screenSetup">
-  <div class="setup-header">
-    <a class="back-btn" href="/">&#8592; ЛОББИ</a>
-    <h1>&#9876; POLITICAL ARENA</h1>
-  </div>
-  <div class="mode-selector">
-    <button class="mode-btn active" id="btnPvE" onclick="setMode('pve')">&#129302; vs AI</button>
-    <button class="mode-btn"        id="btnPvP" onclick="setMode('pvp')">&#127918; vs ИГРОК</button>
-  </div>
-  <div class="fighter-selection">
-    <div class="fighter-pick">
-      <div class="pick-label">ИГРОК 1</div>
-      <div class="pick-controls" id="pickControlsA">A / D / W / S | F</div>
-      <div class="pick-portrait" id="portraitA"><div class="pick-placeholder">?</div></div>
-      <div class="pick-name" id="pickNameA">— выбери —</div>
-    </div>
-    <div class="pick-vs">VS</div>
-    <div class="fighter-pick">
-      <div class="pick-label" id="labelB">&#129302; AI</div>
-      <div class="pick-controls" id="pickControlsB">AUTO</div>
-      <div class="pick-portrait" id="portraitB"><div class="pick-placeholder">?</div></div>
-      <div class="pick-name" id="pickNameB">— выбери —</div>
-    </div>
-  </div>
-  <div class="fighters-scroll">
-    <div class="fighters-row" id="roster"></div>
-  </div>
-  <button class="btn-start" id="btnStart" disabled onclick="startFight()">&#9876; В БОЙ!</button>
-</div>
+<canvas id="gameCanvas"></canvas>
+<canvas id="bloodCanvas"></canvas>
 
-<!-- ═══ ARENA SCREEN ═══ -->
-<div class="screen" id="screenArena">
-
-  <!-- HUD -->
-  <div class="hud">
-    <div class="hud-left">
+<!-- HUD -->
+<div id="hud" style="display:none">
+  <div class="hud-row">
+    <div class="hud-fighter left" id="hudA">
+      <div class="hud-name" id="hudNameA">—</div>
       <img class="hud-avatar" id="hudAvatarA" src="" alt="">
-      <div class="hud-info">
-        <div class="hud-name" id="hudNameA">—</div>
-        <div class="hp-bar"><div class="hp-fill" id="hpFillA" style="width:100%"></div></div>
-        <div class="combo-bar"><div class="combo-fill" id="comboFillA" style="width:0%"></div></div>
-        <div style="font-size:10px;color:#888;margin-top:2px">
-          <span id="hpNumA">—</span> HP &nbsp; &#9889; <span id="comboCountA">0</span>/3
-        </div>
-      </div>
+      <div class="hud-bar-track"><div class="hud-bar-fill" id="hpFillA" style="width:100%"></div></div>
+      <div class="combo-badge" id="comboBadgeA"></div>
     </div>
     <div class="hud-center">
-      <div class="round-num" id="roundNum">RD 1</div>
-      <div class="timer" id="timer">45</div>
-      <div style="font-size:11px;color:#666" id="roundScore">0 — 0</div>
+      <div id="timerBox">45</div>
+      <div id="roundLabel">РАУНД 1</div>
     </div>
-    <div class="hud-right">
-      <div class="hud-info right">
-        <div class="hud-name" id="hudNameB">—</div>
-        <div class="hp-bar"><div class="hp-fill right" id="hpFillB" style="width:100%"></div></div>
-        <div class="combo-bar"><div class="combo-fill right" id="comboFillB" style="width:0%"></div></div>
-        <div style="font-size:10px;color:#888;margin-top:2px;text-align:right">
-          <span id="hpNumB">—</span> HP &nbsp; &#9889; <span id="comboCountB">0</span>/3
-        </div>
-      </div>
+    <div class="hud-fighter right" id="hudB">
+      <div class="hud-name" id="hudNameB">—</div>
       <img class="hud-avatar" id="hudAvatarB" src="" alt="">
-    </div>
-  </div>
-
-  <!-- Stage -->
-  <div class="arena" id="arena">
-    <div class="fighter" id="fighterA">
-      <img class="fighter-img" id="imgA" src="" alt="">
-      <div class="shield" id="shieldA">&#128737;</div>
-    </div>
-    <div class="falling-zone" id="fallingZone"></div>
-    <div class="damage-layer" id="damageLayer"></div>
-    <div class="move-log" id="moveLog"></div>
-    <div class="fighter" id="fighterB">
-      <img class="fighter-img flip" id="imgB" src="" alt="">
-      <div class="shield" id="shieldB">&#128737;</div>
-    </div>
-  </div>
-
-  <!-- Controls -->
-  <div class="controls">
-    <div class="ctrl-side" id="ctrlLeft">
-      <button class="ctrl-btn" ontouchstart="act('A','left')"  onclick="act('A','left')">&#128074;<br><kbd>A</kbd></button>
-      <button class="ctrl-btn" ontouchstart="act('A','right')" onclick="act('A','right')">&#129148;<br><kbd>D</kbd></button>
-      <button class="ctrl-btn" ontouchstart="act('A','kick')"  onclick="act('A','kick')">&#129461;<br><kbd>W</kbd></button>
-      <button class="ctrl-btn block"
-        ontouchstart="act('A','block')" ontouchend="actEnd('A')"
-        onmousedown="act('A','block')" onmouseup="actEnd('A')">&#128737;<br><kbd>S</kbd></button>
-      <button class="ctrl-btn special" id="specA" disabled
-        ontouchstart="act('A','special')" onclick="act('A','special')">&#9889;<br><kbd>F</kbd></button>
-    </div>
-    <button class="btn-pause" onclick="togglePause()">&#9208;</button>
-    <div class="ctrl-side" id="ctrlRight" style="display:none">
-      <button class="ctrl-btn" ontouchstart="act('B','left')"  onclick="act('B','left')">&#128074;<br><kbd>&#8592;</kbd></button>
-      <button class="ctrl-btn" ontouchstart="act('B','right')" onclick="act('B','right')">&#129148;<br><kbd>&#8594;</kbd></button>
-      <button class="ctrl-btn" ontouchstart="act('B','kick')"  onclick="act('B','kick')">&#129461;<br><kbd>&#8593;</kbd></button>
-      <button class="ctrl-btn block"
-        ontouchstart="act('B','block')" ontouchend="actEnd('B')"
-        onmousedown="act('B','block')" onmouseup="actEnd('B')">&#128737;<br><kbd>&#8595;</kbd></button>
-      <button class="ctrl-btn special" id="specB" disabled
-        ontouchstart="act('B','special')" onclick="act('B','special')">&#9889;<br><kbd>Enter</kbd></button>
+      <div class="hud-bar-track"><div class="hud-bar-fill" id="hpFillB" style="width:100%"></div></div>
+      <div class="combo-badge" id="comboBadgeB"></div>
     </div>
   </div>
 </div>
 
-<!-- ═══ ROUND BREAK OVERLAY ═══ -->
-<div class="round-break-overlay" id="screenRoundBreak">
-  <div class="round-break-title" id="roundBreakTitle">РАУНД ОКОНЧЕН</div>
-  <div class="round-break-sub" id="roundBreakResult">—</div>
-  <div class="round-break-score" id="roundBreakScore">0 — 0</div>
-  <div class="round-break-sub" id="roundBreakNext">Раунд 2</div>
-</div>
-
-<!-- ═══ PAUSE OVERLAY ═══ -->
-<div class="overlay" id="pauseOverlay" style="display:none">
-  <div class="pause-box">
-    <h2>&#9208; ПАУЗА</h2>
-    <button onclick="togglePause()">&#9654; ПРОДОЛЖИТЬ</button>
-    <button onclick="location.reload()">&#128260; РЕСТАРТ</button>
-    <a href="/">&#8592; В ЛОББИ</a>
+<!-- Touch Controls -->
+<div id="touchControls" style="display:none">
+  <div class="touch-left">
+    <div id="tbtnLeft"  class="tbtn" onpointerdown="touchAction('A','left',true)" onpointerup="touchAction('A','left',false)" onpointercancel="touchAction('A','left',false)" onpointerleave="touchAction('A','left',false)">◀</div>
+    <div id="tbtnRight" class="tbtn" onpointerdown="touchAction('A','right',true)" onpointerup="touchAction('A','right',false)" onpointercancel="touchAction('A','right',false)" onpointerleave="touchAction('A','right',false)">▶</div>
   </div>
-</div>
-
-<!-- ═══ RESULT SCREEN ═══ -->
-<div class="screen" id="screenResult">
-  <div class="result-box">
-    <div class="result-title" id="resultTitle">—</div>
-    <img class="result-img" id="resultImg" src="" alt="">
-    <div class="result-name" id="resultName">—</div>
-    <div style="font-size:16px;color:#ffd700;margin:8px 0;font-style:italic" id="resultTaunt"></div>
-    <div class="result-stats" id="resultStats"></div>
-    <div class="result-btns">
-      <button onclick="rematch()">&#128260; РЕВАНШ</button>
-      <button onclick="changeChampion()">&#127918; СМЕНИТЬ БОЙЦА</button>
-      <a href="/">&#8592; ГЛАВНАЯ</a>
+  <div class="touch-right">
+    <div class="touch-row">
+      <div class="tbtn" onpointerdown="triggerAction('A','punch')" id="tbtnPunch">👊</div>
+      <div class="tbtn" onpointerdown="triggerAction('A','kick')" id="tbtnKick">🦵</div>
+    </div>
+    <div class="touch-row">
+      <div class="tbtn block-btn" onpointerdown="touchAction('A','block',true)" onpointerup="touchAction('A','block',false)" onpointercancel="touchAction('A','block',false)" onpointerleave="touchAction('A','block',false)">🛡</div>
+      <div class="tbtn super-btn" onpointerdown="triggerAction('A','special')" id="tbtnSuper">⚡</div>
     </div>
   </div>
 </div>
 
+<button id="pauseBtn" style="display:none" onclick="togglePause()">⏸</button>
+
+<!-- Overlays -->
+<div id="roundBreak"><div id="roundBreakTitle">РАУНД 1</div></div>
+<div id="superOverlay">
+  <div id="superFighterName"></div>
+  <div id="superMoveName">СУПЕРУДАР</div>
+  <div id="superMoveDesc"></div>
+</div>
+<div id="pauseOverlay">
+  <h2>ПАУЗА</h2>
+  <button class="btn-primary" onclick="togglePause()">ПРОДОЛЖИТЬ</button>
+  <button class="btn-secondary" onclick="quitFight()">ВЫЙТИ</button>
+</div>
+
+<!-- ROSTER SCREEN -->
+<div id="screenRoster" class="screen active">
+  <div class="arena-title">⚔ POLITICAL ARENA</div>
+  <div class="mode-row">
+    <button class="btn-mode active" id="modePvE" onclick="setMode('pve')">vs ИИ</button>
+    <button class="btn-mode" id="modePvP" onclick="setMode('pvp')">PvP</button>
+  </div>
+  <div class="pick-row">
+    <div class="pick-slot" id="pickA">
+      <div class="pick-label">ИГРОК 1</div>
+      <div class="pick-avatar"><span id="pickAEmoji">?</span><img id="pickAImg" src="" style="display:none"></div>
+      <div class="pick-name" id="pickAName">Выбери бойца</div>
+    </div>
+    <div class="vs-badge">VS</div>
+    <div class="pick-slot" id="pickB">
+      <div class="pick-label">ИГРОК 2</div>
+      <div class="pick-avatar"><span id="pickBEmoji">?</span><img id="pickBImg" src="" style="display:none"></div>
+      <div class="pick-name" id="pickBName">Выбери бойца</div>
+    </div>
+  </div>
+  <div id="rosterGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;width:100%;max-width:1100px;padding:0 16px;max-height:55vh;overflow-y:auto"></div>
+  <button class="btn-start" id="btnStart" disabled onclick="startFight3D()">⚔ СРАЖАТЬСЯ!</button>
+</div>
+
+<!-- RESULT SCREEN -->
+<div id="screenResult" class="screen">
+  <div id="resultTitle">ПОБЕДА!</div>
+  <img id="resultAvatar" src="" alt="">
+  <div id="resultName"></div>
+  <div id="resultTaunt"></div>
+  <div class="result-btns">
+    <button class="btn-secondary" onclick="showScreen('screenRoster')">◀ МЕНЮ</button>
+    <button class="btn-primary" onclick="revengePlay()">⚔ РЕВАНШ</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160/build/three.min.js"></script>
 <script src="/static/audio.js"></script>
-<script src="/static/fight.js"></script>
+<script src="/static/fight3d.js"></script>
 </body>
 </html>
