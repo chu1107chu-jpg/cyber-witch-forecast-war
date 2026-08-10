@@ -4,9 +4,9 @@ enableCORS = false
 enableXsrfProtection = false
 
 [theme]
-base = "dark"
-primaryColor = "#7c3aed"
-backgroundColor = "#0f172a"
-secondaryBackgroundColor = "#1e293b"
-textColor = "#f8fafc"
+base = "light"
+primaryColor = "#0052f1"
+backgroundColor = "#f7fbff"
+secondaryBackgroundColor = "#e5eeff"
+textColor = "#212121"
 font = "sans serif"
