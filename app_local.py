@@ -73,95 +73,102 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Глобальные стили
+# Глобальные стили — плоский минималистичный дизайн (см. Figma design system:
+# Primary #0052f1, Bg-Blue #e5eeff, Body Text #3b3e45, Radius 12)
 st.markdown("""
 <style>
 .stApp {
-    background:
-        radial-gradient(circle at 0% 0%, rgba(125, 211, 252, 0.35), transparent 28%),
-        radial-gradient(circle at 100% 0%, rgba(196, 181, 253, 0.28), transparent 25%),
-        linear-gradient(180deg, #f7fbff 0%, #eef4fb 52%, #e9f0f8 100%);
-    color: #18212f;
+    background: #f7fbff;
+    color: #212121;
 }
 .main .block-container {
     padding-top: 1.5rem;
     padding-bottom: 2rem;
 }
-[data-testid="stMetricValue"] { font-size: 1.5rem; font-weight: 700; color: #162033; }
-[data-testid="stMetricLabel"] { font-size: 0.82rem; opacity: .78; color: #4b5563; }
-[data-testid="stMetricDelta"] { color: #5b6472; }
+[data-testid="stMetricValue"] { font-size: 1.5rem; font-weight: 700; color: #212121; }
+[data-testid="stMetricLabel"] { font-size: 0.82rem; opacity: .78; color: #3b3e45; }
+[data-testid="stMetricDelta"] { color: #575c66; }
 .metric-up   { color: #0f9f6e; }
 .metric-down { color: #d14d72; }
 .section-header {
     font-size: 1.1rem; font-weight: 600;
-    border-left: 3px solid rgba(99, 102, 241, 0.85);
+    border-left: 3px solid #0052f1;
     padding-left: .6rem; margin: 1.2rem 0 .6rem;
-    color: #18212f;
+    color: #212121;
 }
 div[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, rgba(255,255,255,0.82), rgba(244,248,255,0.70));
-    backdrop-filter: blur(20px);
-    border-right: 1px solid rgba(255,255,255,0.55);
+    background: #e5eeff;
+    border-right: 1px solid #c7daff;
 }
-div[data-testid="stSidebar"] * { color: #1f2937; }
+div[data-testid="stSidebar"] * { color: #212121; }
 [data-testid="stHeader"] {
-    background: rgba(255,255,255,0.35);
-    backdrop-filter: blur(14px);
+    background: #f7fbff;
 }
 [data-testid="stToolbar"] { right: 1rem; }
 [data-testid="stAppViewContainer"] {
     background: transparent;
 }
 div[data-testid="stMetric"],
-div[data-testid="stDataFrame"],
-div[data-testid="stPlotlyChart"],
-div.stAlert,
-div[data-baseweb="select"],
-div[data-baseweb="input"],
-div[data-baseweb="base-input"],
-div.stButton > button,
-div[data-testid="stExpander"],
-div[data-testid="stTabs"] {
-    backdrop-filter: blur(18px);
-}
-div[data-testid="stMetric"],
 div[data-testid="stPlotlyChart"],
 div[data-testid="stDataFrame"] {
-    background: linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.48));
-    border: 1px solid rgba(255,255,255,0.62);
-    box-shadow: 0 12px 40px rgba(148, 163, 184, 0.16);
-    border-radius: 22px;
+    background: #ffffff;
+    border: 1px solid #e3e6eb;
+    border-radius: 12px;
     padding: .6rem .8rem;
 }
 div[data-testid="stAlert"] {
-    background: rgba(255,255,255,0.68);
-    border: 1px solid rgba(255,255,255,0.7);
-    border-radius: 18px;
-    color: #1f2937;
+    background: #ffffff;
+    border: 1px solid #e3e6eb;
+    border-radius: 12px;
+    color: #212121;
 }
 div[data-testid="stTabs"] button[role="tab"] {
-    background: rgba(255,255,255,0.52);
-    border: 1px solid rgba(255,255,255,0.7);
+    background: #ffffff;
+    border: 1px solid #e3e6eb;
     border-radius: 999px;
     margin-right: .4rem;
-    color: #334155;
+    color: #3b3e45;
 }
 div[data-testid="stTabs"] button[aria-selected="true"] {
-    background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(224,231,255,0.9));
-    color: #312e81;
+    background: #e5eeff;
+    border: 1px solid #c7daff;
+    color: #0052f1;
 }
 div[data-baseweb="select"] > div,
 div[data-baseweb="base-input"] > div,
 div[data-baseweb="input"] > div {
-    background: rgba(255,255,255,0.70);
-    border: 1px solid rgba(255,255,255,0.7);
-    border-radius: 16px;
+    background: #ffffff;
+    border: 1px solid #e3e6eb;
+    border-radius: 12px;
 }
-div.stButton > button {
-    background: linear-gradient(135deg, rgba(255,255,255,0.92), rgba(224,231,255,0.88));
-    color: #1e1b4b;
-    border: 1px solid rgba(255,255,255,0.85);
-    border-radius: 14px;
+div.stButton > button,
+div.stLinkButton > a,
+div.stDownloadButton > button {
+    background: #0052f1;
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    font-weight: 500;
+    transition: background-color .15s ease;
+}
+div.stButton > button:hover,
+div.stLinkButton > a:hover,
+div.stDownloadButton > button:hover {
+    background: #0041c2;
+    color: #ffffff;
+}
+div.stButton > button:disabled {
+    background: #c0c3c9;
+    color: #ffffff;
+}
+div.stButton > button[kind="secondary"] {
+    background: #ffffff;
+    color: #0052f1;
+    border: 1px solid #0052f1;
+}
+div.stButton > button[kind="secondary"]:hover {
+    background: #e5eeff;
+    color: #0052f1;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -392,10 +399,10 @@ with st.sidebar:
     st.markdown(
         '<a href="/arena/" target="_blank" style="'
         "display:block;text-align:center;padding:12px;margin:8px 0;"
-        "background:linear-gradient(135deg,#ff2d7b,#b84dff);"
-        "color:#fff;border-radius:20px;text-decoration:none;"
-        "font-weight:700;font-size:14px;"
-        'letter-spacing:1px;">:material/sports_esports: ПОЛИТИЧЕСКАЯ АРЕНА</a>',
+        "background:#0052f1;"
+        "color:#fff;border-radius:12px;text-decoration:none;"
+        "font-weight:500;font-size:14px;"
+        'letter-spacing:.5px;">:material/sports_esports: ПОЛИТИЧЕСКАЯ АРЕНА</a>',
         unsafe_allow_html=True,
     )
     st.divider()
@@ -791,6 +798,11 @@ elif page == ":material/toll: Монетка":
         _sys.path.insert(0, _SRC)
     from coin_flip import record_page_view, flip_coin, get_stats
 
+    # Статистика раздела (просмотры/подбросы) видна только владельцу проекта —
+    # добавь ?owner=liza-coin-2026 к ссылке, чтобы увидеть цифры.
+    _COIN_OWNER_KEY = "liza-coin-2026"
+    _is_owner = st.query_params.get("owner") == _COIN_OWNER_KEY
+
     st.title(":material/toll: Монетка")
     st.caption(
         "Подбрасываем виртуальную монету. Почти всегда — орёл или решка, "
@@ -805,7 +817,10 @@ elif page == ":material/toll: Монетка":
         st.session_state["_coin_flip_n"] = 0
         st.session_state["_coin_result"] = None
 
-    col_coin, col_stats = st.columns([2, 1])
+    if _is_owner:
+        col_coin, col_stats = st.columns([2, 1])
+    else:
+        col_coin = st.container()
 
     with col_coin:
         if st.button(":material/casino: Подбросить монету", type="primary", use_container_width=True):
@@ -876,24 +891,25 @@ elif page == ":material/toll: Монетка":
         else:
             st.markdown("<div style='text-align:center;color:#64748b;'>Нажмите кнопку, чтобы подбросить</div>", unsafe_allow_html=True)
 
-    with col_stats:
-        stats = get_stats()
-        st.markdown("**:material/monitoring: Статистика раздела**")
-        st.metric("Просмотров страницы", stats["page_views"])
-        st.metric("Подбросов всего", stats["total_flips"])
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Орёл", stats["heads"])
-        c2.metric("Решка", stats["tails"])
-        c3.metric(":material/bolt: Ребро", stats["edge"])
-        if stats["total_flips"] > 0:
-            edge_rate = stats["edge"] / stats["total_flips"]
-            st.caption(f"Фактическая доля рёбер: {edge_rate:.3%}")
-        st.caption(
-            "Счётчики хранятся локально в data/coin_stats.json. "
-            "На Streamlit Community Cloud сбрасываются при редеплое контейнера — "
-            "для устойчивой веб-аналитики понадобится внешний сервис "
-            "(Plausible / Google Analytics)."
-        )
+    if _is_owner:
+        with col_stats:
+            stats = get_stats()
+            st.markdown("**:material/monitoring: Статистика раздела** :gray-badge[только вы это видите]")
+            st.metric("Просмотров страницы", stats["page_views"])
+            st.metric("Подбросов всего", stats["total_flips"])
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Орёл", stats["heads"])
+            c2.metric("Решка", stats["tails"])
+            c3.metric(":material/bolt: Ребро", stats["edge"])
+            if stats["total_flips"] > 0:
+                edge_rate = stats["edge"] / stats["total_flips"]
+                st.caption(f"Фактическая доля рёбер: {edge_rate:.3%}")
+            st.caption(
+                "Счётчики хранятся локально в data/coin_stats.json. "
+                "На Streamlit Community Cloud сбрасываются при редеплое контейнера — "
+                "для устойчивой веб-аналитики понадобится внешний сервис "
+                "(Plausible / Google Analytics)."
+            )
 
 elif page == ":material/volunteer_activism: Донат":
     try:
