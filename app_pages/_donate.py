@@ -24,16 +24,16 @@ def _qr_url(data: str) -> str:
 
 
 def render_donate_page() -> None:
-    st.markdown("## 💝 Поддержать проект")
+    st.markdown("## :material/volunteer_activism: Поддержать проект")
     st.markdown(
         f"Если **{PROJECT_NAME}** оказался полезен — можно поддержать автора. "
-        "Это помогает развивать модели, добавлять новые источники данных и не платить за сервер из кармана 🙏"
+        "Это помогает развивать модели, добавлять новые источники данных и не платить за сервер из кармана :material/favorite:"
     )
 
     st.divider()
 
     # ── CRYPTO ────────────────────────────────────────────────────────────────
-    st.markdown("### 🪙 Криптовалюта (из любой страны)")
+    st.markdown("### :material/toll: Криптовалюта (из любой страны)")
     st.caption("Мгновенно · Анонимно · Комиссия ~$0 (TRC20)")
 
     crypto_tabs = ["USDT TRC20"]
@@ -55,9 +55,9 @@ def render_donate_page() -> None:
                 st.markdown("**Токен:** `USDT`")
                 st.markdown("**Адрес:**")
                 st.code(USDT_TRC20_ADDRESS, language=None)
-                st.caption("⚠️ Отправляй только USDT по сети TRC20 — иначе средства потеряются")
+                st.caption(":material/warning: Отправляй только USDT по сети TRC20 — иначе средства потеряются")
         else:
-            st.warning("⚙️ Адрес ещё не настроен. Открой `pages/_donate.py` и вставь свой USDT TRC20 адрес из Bybit.")
+            st.warning(":material/settings: Адрес ещё не настроен. Открой `pages/_donate.py` и вставь свой USDT TRC20 адрес из Bybit.")
             st.markdown("""
 **Как получить адрес в Bybit:**
 1. Bybit → **Assets** → **Deposit**
@@ -76,7 +76,7 @@ def render_donate_page() -> None:
                 st.markdown("**Сеть:** `Ethereum (ERC20)`")
                 st.markdown("**Токен:** `USDT`")
                 st.code(USDT_ERC20_ADDRESS, language=None)
-                st.caption("⚠️ Комиссия сети Ethereum обычно $5–20")
+                st.caption(":material/warning: Комиссия сети Ethereum обычно $5–20")
 
     # BTC (опционально)
     if BTC_ADDRESS:
@@ -102,9 +102,9 @@ def render_donate_page() -> None:
             "Регистрация не нужна, достаточно выбрать сумму и оплатить."
         )
         if BOOSTY_URL and "ТВОй_НИК" not in BOOSTY_URL:
-            st.link_button("💸 Задонатить на Boosty", BOOSTY_URL, type="primary", use_container_width=True)
+            st.link_button(":material/payments: Задонатить на Boosty", BOOSTY_URL, type="primary", use_container_width=True)
         else:
-            st.warning("⚙️ Вставь свой URL из Boosty в `BOOSTY_URL` в файле `pages/_donate.py`")
+            st.warning(":material/settings: Вставь свой URL из Boosty в `BOOSTY_URL` в файле `pages/_donate.py`")
             st.markdown("""
 **Как зарегистрироваться на Boosty:**
 1. Зайди на [boosty.to](https://boosty.to) и войди через VK / телефон
@@ -123,16 +123,16 @@ def render_donate_page() -> None:
     st.divider()
 
     # ── FAQ ───────────────────────────────────────────────────────────────────
-    with st.expander("❓ FAQ — безопасно ли это? законно ли?"):
+    with st.expander(":material/help: FAQ — безопасно ли это? законно ли?"):
         st.markdown("""
 **Криптовалюта (USDT):**
-- ✅ Принимать USDT на личный кошелёк от других физлиц — легально в большинстве стран
-- ✅ Bybit — лицензированная биржа, хранит USDT в cold storage
-- ✅ Транзакции в сети TRC20 стоят ~$1 и занимают ~1 минуту
+- :material/check_circle: Принимать USDT на личный кошелёк от других физлиц — легально в большинстве стран
+- :material/check_circle: Bybit — лицензированная биржа, хранит USDT в cold storage
+- :material/check_circle: Транзакции в сети TRC20 стоят ~$1 и занимают ~1 минуту
 - ℹ️ В РФ: по закону о ЦФА криптовалюту можно получать, но нельзя использовать как средство платежа за товары/услуги. Для личных донатов — нет прямого запрета.
 
 **Boosty:**
-- ✅ Российский сервис, работает по российскому законодательству
-- ✅ Выплаты через банковский перевод на ИП / самозанятого / физлицо
-- ✅ Принимает карты из 40+ стран
+- :material/check_circle: Российский сервис, работает по российскому законодательству
+- :material/check_circle: Выплаты через банковский перевод на ИП / самозанятого / физлицо
+- :material/check_circle: Принимает карты из 40+ стран
         """)

@@ -68,7 +68,7 @@ MARKET_FLAGS = {
 # ─────────────────────────────────────────────
 st.set_page_config(
     page_title="Предсказания",
-    page_icon="🔮",
+    page_icon=":material/insights:",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -378,13 +378,13 @@ def predict_ticker(ticker: str, models, feature_cols, macro=None):
 #  Sidebar
 # ─────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 🔮 Предсказания")
+    st.markdown("## :material/insights: Предсказания")
     st.caption("Рыночные прогнозы на базе ML")
     st.divider()
 
     page = st.radio(
         "Раздел",
-        ["📊 Дашборд", "🔍 Тикер", "⚔️ Конфликты", "💝 Донат"],
+        [":material/dashboard: Дашборд", ":material/search: Тикер", ":material/swords: Конфликты", ":material/volunteer_activism: Донат"],
         label_visibility="collapsed",
     )
     st.divider()
@@ -395,12 +395,12 @@ with st.sidebar:
         "background:linear-gradient(135deg,#ff2d7b,#b84dff);"
         "color:#fff;border-radius:20px;text-decoration:none;"
         "font-weight:700;font-size:14px;"
-        'letter-spacing:1px;">🎮 ПОЛИТИЧЕСКАЯ АРЕНА</a>',
+        'letter-spacing:1px;">:material/sports_esports: ПОЛИТИЧЕСКАЯ АРЕНА</a>',
         unsafe_allow_html=True,
     )
     st.divider()
 
-    if page == "🔍 Тикер":
+    if page == ":material/search: Тикер":
         market_filter = st.radio("Рынок", ["🇺🇸 США", "🇷🇺 Россия"], horizontal=True)
         pool = TICKERS_US if market_filter == "🇺🇸 США" else TICKERS_RU
         sel_ticker = st.selectbox(
@@ -430,8 +430,8 @@ except Exception as e:
 # ═══════════════════════════════════════════════
 #  СТРАНИЦА: ДАШБОРД
 # ═══════════════════════════════════════════════
-if page == "📊 Дашборд":
-    st.title("📊 Рыночный дашборд")
+if page == ":material/dashboard: Дашборд":
+    st.title(":material/dashboard: Рыночный дашборд")
     st.caption("Прогнозы на основе обученных моделей. Обновляется каждые 5 минут.")
 
     if not models_loaded:
@@ -480,18 +480,18 @@ if page == "📊 Дашборд":
         best   = df_table.loc[df_table[H1_LABEL].idxmax(), "Тикер"]
         best_p = df_table[H1_LABEL].max()
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric(f"📈 Растут за {H1_DESC}", f"{up1} / {len(rows)}",
+        c1.metric(f":material/trending_up: Растут за {H1_DESC}", f"{up1} / {len(rows)}",
               help=explain_signal_count(up1, len(rows), H1_DESC))
-        c2.metric("📈 Растут за 20д", f"{up20} / {len(rows)}",
+        c2.metric(":material/trending_up: Растут за 20д", f"{up20} / {len(rows)}",
               help=explain_signal_count(up20, len(rows), "20 дней"))
-        c3.metric("🏆 Лучший сигнал", f"{best}", f"{best_p:.1%} вверх",
+        c3.metric(":material/emoji_events: Лучший сигнал", f"{best}", f"{best_p:.1%} вверх",
               help=f"Наибольшая вероятность роста среди всех инструментов. У {best} — {best_p:.0%}.")
-        c4.metric("📅 Дата прогноза", datetime.now().strftime("%d.%m.%Y"),
+        c4.metric(":material/calendar_month: Дата прогноза", datetime.now().strftime("%d.%m.%Y"),
               help="Дата последнего пересчёта прогнозов.")
 
         if USING_LGBM:
             st.caption(
-                f"🤖 **LightGBM v2** · реальная точность на данных 2024–2026: "
+                f":material/smart_toy: **LightGBM v2** · реальная точность на данных 2024–2026: "
                 f"**53.3%** (5 дней) · **56.5%** (20 дней) при уверенных сигналах >55%"
             )
         st.divider()
@@ -551,10 +551,10 @@ if page == "📊 Дашборд":
 # ═══════════════════════════════════════════════
 #  СТРАНИЦА: ТИКЕР
 # ═══════════════════════════════════════════════
-elif page == "🔍 Тикер":
+elif page == ":material/search: Тикер":
     ticker = sel_ticker
     label  = TICKER_LABELS.get(ticker, ticker)
-    st.title(f"🔍 {ticker} — {label}")
+    st.title(f":material/search: {ticker} — {label}")
 
     if not models_loaded:
         st.stop()
@@ -589,7 +589,7 @@ elif page == "🔍 Тикер":
                   "бычий" if p20 > 0.55 else "медвежий" if p20 < 0.45 else "нейтрально",
                   help=explain_probability(p20, "20 дней"))
         c4.metric("Сигнал",
-                  "🟢 РОСТ" if p5 > 0.55 else "🔴 СНИЖЕНИЕ" if p5 < 0.45 else "⚪ НЕЙТРАЛЬНО",
+                  ":green[:material/circle:] РОСТ" if p5 > 0.55 else ":red[:material/circle:] СНИЖЕНИЕ" if p5 < 0.45 else ":gray[:material/circle:] НЕЙТРАЛЬНО",
                   help="Сигнал считается надёжным только если вероятность >55% или <45%.")
     else:
         c2.metric("Прогноз", "н/д", help="По этому активу сейчас недостаточно данных для расчёта.")
@@ -736,8 +736,8 @@ elif page == "🔍 Тикер":
                 st.markdown(f"""
 | Горизонт | Вероятность роста | Сигнал |
 |----------|-------------------|--------|
-| **{_p5l}** | `{p_h1:.1%}` | {"🟢 Рост" if p_h1 > 0.5 else "🔴 Падение"} |
-| **20 дней** | `{p_h20:.1%}` | {"🟢 Рост" if p_h20 > 0.5 else "🔴 Падение"} |
+| **{_p5l}** | `{p_h1:.1%}` | {":green[:material/circle:] Рост" if p_h1 > 0.5 else ":red[:material/circle:] Падение"} |
+| **20 дней** | `{p_h20:.1%}` | {":green[:material/circle:] Рост" if p_h20 > 0.5 else ":red[:material/circle:] Падение"} |
 """)
             else:
                 proj_1d  = last_close * (1 + pred["target_r1"])
@@ -747,8 +747,8 @@ elif page == "🔍 Тикер":
 |---------|----------|--------------|
 | **r¹ (1 день)** | `{pred['target_r1']:+.4f}` | `${proj_1d:,.2f}` |
 | **R²⁰ (20 дней)** | `{pred['target_R20']:+.4f}` | `${proj_20d:,.2f}` |
-| **p↑ (t+1)** | `{p_h1:.1%}` | {"🟢 Рост" if p_h1 > 0.5 else "🔴 Падение"} |
-| **p↑ (t+20)** | `{p_h20:.1%}` | {"🟢 Рост" if p_h20 > 0.5 else "🔴 Падение"} |
+| **p↑ (t+1)** | `{p_h1:.1%}` | {":green[:material/circle:] Рост" if p_h1 > 0.5 else ":red[:material/circle:] Падение"} |
+| **p↑ (t+20)** | `{p_h20:.1%}` | {":green[:material/circle:] Рост" if p_h20 > 0.5 else ":red[:material/circle:] Падение"} |
 """)
             signal_color = "#26c281" if p_h1 > 0.5 else "#e74c3c"
             signal_text  = "ПОКУПКА" if p_h1 > 0.6 else \
@@ -765,7 +765,7 @@ elif page == "🔍 Тикер":
 # ═══════════════════════════════════════════════
 #  СТРАНИЦА: КОНФЛИКТЫ
 # ═══════════════════════════════════════════════
-elif page == "⚔️ Конфликты":
+elif page == ":material/swords: Конфликты":
     try:
         import importlib, sys
         # Безопасный reload: перезагружаем только если оба модуля уже в sys.modules
@@ -776,14 +776,14 @@ elif page == "⚔️ Конфликты":
         render_conflict_page()
     except Exception as _cf_err:
         import traceback as _tb
-        st.error(f"❌ Ошибка загрузки раздела конфликтов: {_cf_err}")
+        st.error(f":material/cancel: Ошибка загрузки раздела конфликтов: {_cf_err}")
         st.code(_tb.format_exc())
-elif page == "💝 Донат":
+elif page == ":material/volunteer_activism: Донат":
     try:
         from app_pages._donate import render_donate_page
         render_donate_page()
     except Exception as _don_err:
         import traceback as _tb
-        st.error(f"❌ Ошибка загрузки страницы доната: {_don_err}")
+        st.error(f":material/cancel: Ошибка загрузки страницы доната: {_don_err}")
         st.code(_tb.format_exc())
 

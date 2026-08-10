@@ -10,23 +10,23 @@ import random
 # ──────────────────────────────────────────────────────────────
 STAT_LABELS = {
     "strength":  "💪 Сила",
-    "cunning":   "🧠 Хитрость",
+    "cunning":   ":material/psychology: Хитрость",
     "charisma":  "✨ Харизма",
-    "resources": "💰 Ресурсы",
+    "resources": ":material/payments: Ресурсы",
     "luck":      "🍀 Удача",
     "madness":   "🤪 Безумие",
 }
 
 ATTACK_TYPE_LABELS = {
-    "military":    "⚔️ Военная",
-    "economic":    "💰 Экономическая",
+    "military":    ":material/swords: Военная",
+    "economic":    ":material/payments: Экономическая",
     "diplomatic":  "🤝 Дипломатия",
     "media":       "📺 Медийная",
     "intrigue":    "🕵️ Интрига",
     "provocation": "🎭 Провокация",
 }
 
-CATEGORIES = ["🇷🇺 Россия", "🇺🇸 США", "🇺🇦 Украина", "🌍 Мир", "⚔️ Легенды"]
+CATEGORIES = ["🇷🇺 Россия", "🇺🇸 США", "🇺🇦 Украина", ":material/public: Мир", ":material/swords: Легенды"]
 
 # ──────────────────────────────────────────────────────────────
 #  30 ПОЛИТИКОВ
@@ -55,7 +55,7 @@ POLITICIANS = [
          {"name": "Красная армия", "type": "military", "power": 90},
          {"name": "Враг народа", "type": "media", "power": 80},
      ]},
-    {"id": "lenin", "name": "Владимир Ленин", "icon": "🔴", "category": "🇷🇺 Россия",
+    {"id": "lenin", "name": "Владимир Ленин", "icon": ":red[:material/circle:]", "category": "🇷🇺 Россия",
      "era": "1917–1924", "desc": "Живее всех живых. Мировая революция и лампочка Ильича.",
      "stats": {"strength": 5, "cunning": 9, "charisma": 10, "resources": 6, "luck": 7, "madness": 9},
      "attacks": [
@@ -258,8 +258,8 @@ POLITICIANS = [
          {"name": "Минские переговоры", "type": "diplomatic", "power": 65},
      ]},
 
-    # ═══════════════ 🌍 МИР (4) ═══════════════
-    {"id": "merkel", "name": "Ангела Меркель", "icon": "🇩🇪", "category": "🌍 Мир",
+    # ═══════════════ :material/public: МИР (4) ═══════════════
+    {"id": "merkel", "name": "Ангела Меркель", "icon": "🇩🇪", "category": ":material/public: Мир",
      "era": "2005–2021", "desc": "Мутти. 16 лет тишины и стабильности. Ромбик руками — фирменный знак.",
      "stats": {"strength": 4, "cunning": 9, "charisma": 7, "resources": 9, "luck": 7, "madness": 2},
      "attacks": [
@@ -270,7 +270,7 @@ POLITICIANS = [
          {"name": "Терпение", "type": "intrigue", "power": 75},
          {"name": "Тихий шёпот", "type": "intrigue", "power": 70},
      ]},
-    {"id": "macron", "name": "Эмманюэль Макрон", "icon": "🥖", "category": "🌍 Мир",
+    {"id": "macron", "name": "Эмманюэль Макрон", "icon": "🥖", "category": ":material/public: Мир",
      "era": "2017–н.в.", "desc": "Юный Наполеон. Жена старше на 25 лет. Жёлтые жилеты — его кошмар.",
      "stats": {"strength": 4, "cunning": 7, "charisma": 8, "resources": 7, "luck": 6, "madness": 5},
      "attacks": [
@@ -281,7 +281,7 @@ POLITICIANS = [
          {"name": "Ядерный арсенал", "type": "military", "power": 80},
          {"name": "Европейская армия", "type": "diplomatic", "power": 78},
      ]},
-    {"id": "xi", "name": "Си Цзиньпин", "icon": "🐼", "category": "🌍 Мир",
+    {"id": "xi", "name": "Си Цзиньпин", "icon": "🐼", "category": ":material/public: Мир",
      "era": "2012–н.в.", "desc": "Винни-Пух, которого нельзя называть Винни-Пухом. Великий файрвол и общее процветание.",
      "stats": {"strength": 6, "cunning": 10, "charisma": 6, "resources": 10, "luck": 7, "madness": 5},
      "attacks": [
@@ -292,7 +292,7 @@ POLITICIANS = [
          {"name": "Панда-дипломатия", "type": "diplomatic", "power": 70},
          {"name": "Общее процветание", "type": "economic", "power": 82},
      ]},
-    {"id": "modi", "name": "Нарендра Моди", "icon": "🙏", "category": "🌍 Мир",
+    {"id": "modi", "name": "Нарендра Моди", "icon": ":material/favorite:", "category": ":material/public: Мир",
      "era": "2014–н.в.", "desc": "Йога на лужайке ООН. 1.4 миллиарда подписчиков.",
      "stats": {"strength": 5, "cunning": 7, "charisma": 8, "resources": 7, "luck": 6, "madness": 4},
      "attacks": [
@@ -304,8 +304,8 @@ POLITICIANS = [
          {"name": "Цифровая Индия", "type": "economic", "power": 72},
      ]},
 
-    # ═══════════════ ⚔️ ЛЕГЕНДЫ (6) ═══════════════
-    {"id": "churchill", "name": "Уинстон Черчилль", "icon": "🎩", "category": "⚔️ Легенды",
+    # ═══════════════ :material/swords: ЛЕГЕНДЫ (6) ═══════════════
+    {"id": "churchill", "name": "Уинстон Черчилль", "icon": "🎩", "category": ":material/swords: Легенды",
      "era": "1940–1945, 1951–1955", "desc": "Кровь, пот и слёзы. Сигара, виски и V-знак. Бульдог империи.",
      "stats": {"strength": 7, "cunning": 9, "charisma": 10, "resources": 8, "luck": 8, "madness": 6},
      "attacks": [
@@ -316,7 +316,7 @@ POLITICIANS = [
          {"name": "Железный занавес", "type": "diplomatic", "power": 88},
          {"name": "Бомбёжка Дрездена", "type": "military", "power": 90},
      ]},
-    {"id": "hitler", "name": "Адольф Гитлер", "icon": "💀", "category": "⚔️ Легенды",
+    {"id": "hitler", "name": "Адольф Гитлер", "icon": "💀", "category": ":material/swords: Легенды",
      "era": "1933–1945", "desc": "Проиграл войну, но сначала начал её. Вегетарианец с усиками.",
      "stats": {"strength": 6, "cunning": 7, "charisma": 9, "resources": 7, "luck": 3, "madness": 10},
      "attacks": [
@@ -327,7 +327,7 @@ POLITICIANS = [
          {"name": "Операция Барбаросса", "type": "military", "power": 90},
          {"name": "Бункер-финал", "type": "provocation", "power": 30},
      ]},
-    {"id": "napoleon", "name": "Наполеон Бонапарт", "icon": "👑", "category": "⚔️ Легенды",
+    {"id": "napoleon", "name": "Наполеон Бонапарт", "icon": "👑", "category": ":material/swords: Легенды",
      "era": "1799–1815", "desc": "Маленький капрал с большими амбициями. Завоевал Европу, проиграл зиме.",
      "stats": {"strength": 9, "cunning": 9, "charisma": 9, "resources": 7, "luck": 4, "madness": 7},
      "attacks": [
@@ -338,7 +338,7 @@ POLITICIANS = [
          {"name": "Шляпа императора", "type": "media", "power": 65},
          {"name": "Ватерлоо наоборот", "type": "military", "power": 80},
      ]},
-    {"id": "alexander", "name": "Александр Македонский", "icon": "⚔️", "category": "⚔️ Легенды",
+    {"id": "alexander", "name": "Александр Македонский", "icon": ":material/swords:", "category": ":material/swords: Легенды",
      "era": "336–323 до н.э.", "desc": "Завоевал полмира к 30 годам. Умер от вечеринки (или яда).",
      "stats": {"strength": 10, "cunning": 8, "charisma": 10, "resources": 8, "luck": 7, "madness": 7},
      "attacks": [
@@ -349,7 +349,7 @@ POLITICIANS = [
          {"name": "Обожествление", "type": "media", "power": 80},
          {"name": "Пир в Вавилоне", "type": "provocation", "power": 60},
      ]},
-    {"id": "mao", "name": "Мао Цзэдун", "icon": "📕", "category": "⚔️ Легенды",
+    {"id": "mao", "name": "Мао Цзэдун", "icon": "📕", "category": ":material/swords: Легенды",
      "era": "1949–1976", "desc": "Красная книжечка. Большой скачок. Культурная революция. Воробьи не одобряют.",
      "stats": {"strength": 7, "cunning": 8, "charisma": 8, "resources": 7, "luck": 6, "madness": 9},
      "attacks": [
@@ -360,7 +360,7 @@ POLITICIANS = [
          {"name": "Длинный марш", "type": "military", "power": 80},
          {"name": "Сто цветов", "type": "intrigue", "power": 75},
      ]},
-    {"id": "mandela", "name": "Нельсон Мандела", "icon": "✊", "category": "⚔️ Легенды",
+    {"id": "mandela", "name": "Нельсон Мандела", "icon": "✊", "category": ":material/swords: Легенды",
      "era": "1994–1999", "desc": "27 лет в тюрьме → президент. Терпение — суперсила.",
      "stats": {"strength": 6, "cunning": 7, "charisma": 10, "resources": 3, "luck": 8, "madness": 3},
      "attacks": [
@@ -872,7 +872,7 @@ def _render_char_card(p: dict) -> str:
         f'<div class="pk-era">{p["era"]}</div>'
         f'<div class="pk-desc">{p["desc"]}</div>'
         f'</div></div>'
-        f'<div class="pk-section">📊 Характеристики</div>'
+        f'<div class="pk-section">:material/dashboard: Характеристики</div>'
         f'<div class="pk-stats">{stats_html}</div>'
         f'<div class="pk-section">⚡ Атаки (выбери 3)</div>'
         f'<div class="pk-atk-grid">{attacks_html}</div>'
@@ -915,7 +915,7 @@ def render_politicians_page() -> None:
     col_a, col_vs, col_b = st.columns([5, 1, 5])
 
     with col_a:
-        st.markdown("### 🔴 Боец A")
+        st.markdown("### :red[:material/circle:] Боец A")
         a_idx = st.selectbox(
             "Выбери бойца",
             range(len(pool)),
@@ -945,7 +945,7 @@ def render_politicians_page() -> None:
         st.markdown('<div class="pk-vs">VS</div>', unsafe_allow_html=True)
 
     with col_b:
-        st.markdown("### 🔵 Боец B")
+        st.markdown("### :blue[:material/circle:] Боец B")
         b_idx = st.selectbox(
             "Выбери бойца",
             range(len(pool)),
@@ -975,7 +975,7 @@ def render_politicians_page() -> None:
     st.markdown("---")
     st.markdown(
         f'<div class="pk-bet-panel">'
-        f'<div class="pk-coins">🪙 {st.session_state.coins} монет</div>'
+        f'<div class="pk-coins">:material/toll: {st.session_state.coins} монет</div>'
         f'</div>',
         unsafe_allow_html=True,
     )
@@ -1065,14 +1065,14 @@ def render_politicians_page() -> None:
         # Баннер победы/поражения
         if result["user_won"]:
             banner_cls = "win"
-            banner_text = f"🎉 ПОБЕДА! {winner['icon']} {winner['name']} побеждает! {coins_delta} 🪙"
+            banner_text = f"🎉 ПОБЕДА! {winner['icon']} {winner['name']} побеждает! {coins_delta} :material/toll:"
         else:
             banner_cls = "lose"
-            banner_text = f"💀 ПРОИГРЫШ! {winner['icon']} {winner['name']} побеждает! {coins_delta} 🪙"
+            banner_text = f"💀 ПРОИГРЫШ! {winner['icon']} {winner['name']} побеждает! {coins_delta} :material/toll:"
 
         st.markdown(
             f'<div class="pk-result">'
-            f'<div class="pk-result-title">📊 РЕЗУЛЬТАТ БОЯ</div>'
+            f'<div class="pk-result-title">:material/dashboard: РЕЗУЛЬТАТ БОЯ</div>'
             f'<div class="pk-winner-banner {banner_cls}">{banner_text}</div>',
             unsafe_allow_html=True,
         )
@@ -1091,9 +1091,9 @@ def render_politicians_page() -> None:
         )
 
         # Раунды
-        st.markdown('<div class="pk-section">⚔️ Ход боя</div>', unsafe_allow_html=True)
+        st.markdown('<div class="pk-section">:material/swords: Ход боя</div>', unsafe_allow_html=True)
         for i, r in enumerate(result["rounds"]):
-            r_icon = "🔴" if r["round_winner"] == "a" else ("🔵" if r["round_winner"] == "b" else "🤝")
+            r_icon = ":red[:material/circle:]" if r["round_winner"] == "a" else (":blue[:material/circle:]" if r["round_winner"] == "b" else "🤝")
             st.markdown(
                 f'<div class="pk-round">'
                 f'<div class="pk-round-badge">{i+1}</div>'
@@ -1114,7 +1114,7 @@ def render_politicians_page() -> None:
         # Баланс
         st.markdown(
             f'<div style="text-align:center;margin-top:10px;">'
-            f'<span class="pk-coins">🪙 Баланс: {st.session_state.coins} монет</span>'
+            f'<span class="pk-coins">:material/toll: Баланс: {st.session_state.coins} монет</span>'
             f'</div></div>',
             unsafe_allow_html=True,
         )
