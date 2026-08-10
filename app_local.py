@@ -861,21 +861,13 @@ elif page == ":material/toll: Монетка":
 
         if result == "edge":
             st.markdown(
-                """
-                <div style="text-align:center;margin-top:-0.5rem;">
-                  <span style="background:linear-gradient(135deg,#ff2d7b,#b84dff);
-                        color:#fff;padding:.5rem 1.1rem;border-radius:999px;
-                        font-weight:800;font-size:1.1rem;">
-                  :material/bolt: РЕБРО! Это очень редкий исход
-                  </span>
-                </div>
-                """,
-                unsafe_allow_html=True,
+                ":violet-badge[:material/bolt: РЕБРО! Это очень редкий исход]",
+                text_alignment="center",
             )
         elif result == "heads":
-            st.markdown("<div style='text-align:center;font-weight:700;font-size:1.2rem;'>:material/check_circle: Орёл</div>", unsafe_allow_html=True)
+            st.markdown("#### :material/check_circle: Орёл", text_alignment="center")
         elif result == "tails":
-            st.markdown("<div style='text-align:center;font-weight:700;font-size:1.2rem;'>:material/check_circle: Решка</div>", unsafe_allow_html=True)
+            st.markdown("#### :material/check_circle: Решка", text_alignment="center")
         else:
             st.markdown("<div style='text-align:center;color:#64748b;'>Нажмите кнопку, чтобы подбросить</div>", unsafe_allow_html=True)
 
