@@ -7,8 +7,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 
 def test_config_loaders():
-    from src.utils.config import get_app_config, get_games_config, get_model_config
-    cfg = get_app_config()
+    from src.utils.config import load_app_config, load_games_config, load_model_config
+    cfg = load_app_config()
     assert "app" in cfg or isinstance(cfg, dict)
 
 

@@ -5,10 +5,6 @@ on:
     - cron: "0 2 * * *"     # 02:00 UTC every day
   workflow_dispatch:          # manual trigger
 
-defaults:
-  run:
-    working-directory: предсказания
-
 jobs:
   etl-train:
     name: ETL → Features → Train → Upload
@@ -42,7 +38,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements_full.txt
 
       # ---------- ETL ----------
       - name: Fetch quotes

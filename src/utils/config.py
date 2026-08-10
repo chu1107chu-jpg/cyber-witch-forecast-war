@@ -5,7 +5,7 @@ from pathlib import Path
 
 import yaml
 
-CONFIG_DIR = Path(__file__).parents[3] / "configs"
+CONFIG_DIR = Path(__file__).parents[2] / "configs"
 
 
 @lru_cache(maxsize=None)

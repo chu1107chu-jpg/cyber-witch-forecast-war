@@ -36,6 +36,17 @@ except Exception as _e:
     _NEWS_AVAILABLE = False
     _e_msg = str(_e)
 
+# Монте-Карло доверительные интервалы и LSTM-прогноз траектории —
+# были в scripts/, но не импортировались на странице (баг: NameError
+# при рендере). Импортируем напрямую, без try/except: если эти модули
+# не грузятся, вся страница и так упадёт в общий try/except в app_local.py.
+from monte_carlo import run_monte_carlo
+from lstm_forecast import predict_trajectory, format_trajectory_html
+from market_data import (
+    fetch_market_data, format_brent, format_lng,
+    format_polymarket, format_metaculus, market_calibration_note,
+)
+
 # Маппинг: факторы news_fetcher → ключи слайдеров страницы
 NEWS_TO_SLIDER = {
     "military_power":      "military_imbalance",
@@ -887,6 +898,16 @@ def render_conflict_page():
             if should_save(ivpn):
                 append_snapshot(_snap)
             st.session_state["_news_fetched"] = False  # сброс флага
+
+        # ── Живые рыночные сигналы (Brent/LNG/Polymarket/Metaculus) ──
+        # Баг: переменная _market нигде не считалась, но использовалась
+        # ниже → NameError. fetch_market_data никогда не бросает исключение
+        # (ошибки по каждому источнику собираются в snap.errors), поэтому
+        # вызов безопасен даже при недоступности внешних API.
+        try:
+            _market = fetch_market_data()
+        except Exception:
+            _market = None
 
         # ── Монте-Карло доверительный интервал ──────────────────────
         _ci = run_monte_carlo(
