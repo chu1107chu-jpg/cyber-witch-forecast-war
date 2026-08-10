@@ -442,11 +442,18 @@ def markov_forward(state_idx: int, steps: int = 12) -> list:
 
 
 def ivpn_to_markov_state(ivpn: float) -> int:
-    """Предположение о текущем состоянии по значению ИВПН."""
+    """Предположение о текущем состоянии по значению ИВПН.
+
+    Баг: раньше при ivpn >= max(threshold) функция возвращала
+    len(MARKOV_STATES)-1 = индекс "🔵 Заморозка" — то есть максимальная
+    напряжённость ошибочно классифицировалась как "заморозка", а не как
+    "🔴 Война". "Заморозка" — состояние, достижимое только через переходную
+    матрицу (после войны), а не напрямую по уровню ИВПН.
+    """
     for i, thr in enumerate(MARKOV_IVPN_THRESHOLDS):
         if ivpn < thr:
             return i
-    return len(MARKOV_STATES) - 1
+    return len(MARKOV_IVPN_THRESHOLDS) - 1  # "🔴 Война" — макс. состояние, определяемое по ИВПН
 
 
 def compute_ivpn(factors: dict) -> float:

@@ -769,10 +769,10 @@ elif page == "⚔️ Конфликты":
     try:
         import importlib, sys
         # Безопасный reload: перезагружаем только если оба модуля уже в sys.modules
-        mod_key = "pages._conflict_forecast"
+        mod_key = "app_pages._conflict_forecast"
         if mod_key in sys.modules and "pages" in sys.modules:
             importlib.reload(sys.modules[mod_key])
-        from pages._conflict_forecast import render_conflict_page
+        from app_pages._conflict_forecast import render_conflict_page
         render_conflict_page()
     except Exception as _cf_err:
         import traceback as _tb
@@ -780,7 +780,7 @@ elif page == "⚔️ Конфликты":
         st.code(_tb.format_exc())
 elif page == "💝 Донат":
     try:
-        from pages._donate import render_donate_page
+        from app_pages._donate import render_donate_page
         render_donate_page()
     except Exception as _don_err:
         import traceback as _tb
