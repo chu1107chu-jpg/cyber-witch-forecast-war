@@ -384,7 +384,7 @@ with st.sidebar:
 
     page = st.radio(
         "Раздел",
-        [":material/dashboard: Дашборд", ":material/search: Тикер", ":material/swords: Конфликты", ":material/volunteer_activism: Донат"],
+        [":material/dashboard: Дашборд", ":material/search: Тикер", ":material/swords: Конфликты", ":material/toll: Монетка", ":material/volunteer_activism: Донат"],
         label_visibility="collapsed",
     )
     st.divider()
@@ -778,6 +778,126 @@ elif page == ":material/swords: Конфликты":
         import traceback as _tb
         st.error(f":material/cancel: Ошибка загрузки раздела конфликтов: {_cf_err}")
         st.code(_tb.format_exc())
+elif page == ":material/toll: Монетка":
+    import random as _random
+    import sys as _sys, os as _os
+    _SRC = _os.path.join(_os.path.dirname(__file__), "src")
+    if _SRC not in _sys.path:
+        _sys.path.insert(0, _SRC)
+    from coin_flip import record_page_view, flip_coin, get_stats
+
+    st.title(":material/toll: Монетка")
+    st.caption(
+        "Подбрасываем виртуальную монету. Почти всегда — орёл или решка, "
+        "но примерно 1 раз из ~400 монета встаёт на ребро."
+    )
+
+    if not st.session_state.get("_coin_view_counted"):
+        record_page_view()
+        st.session_state["_coin_view_counted"] = True
+
+    if "_coin_flip_n" not in st.session_state:
+        st.session_state["_coin_flip_n"] = 0
+        st.session_state["_coin_result"] = None
+
+    col_coin, col_stats = st.columns([2, 1])
+
+    with col_coin:
+        if st.button(":material/casino: Подбросить монету", type="primary", use_container_width=True):
+            result, _ = flip_coin()
+            st.session_state["_coin_result"] = result
+            st.session_state["_coin_flip_n"] += 1
+
+        n = st.session_state["_coin_flip_n"]
+        result = st.session_state["_coin_result"]
+
+        # Финальный угол поворота (плюс несколько полных оборотов для эффекта вращения)
+        spins = 3 * 360
+        end_deg = {"heads": 0, "tails": 180, "edge": 90}.get(result, 0)
+        total_deg = spins + end_deg if result else 0
+        anim = "coin-spin-idle" if not result else f"coin-spin-{n}"
+
+        st.markdown(
+            f"""
+            <style>
+            .coin-scene {{
+                perspective: 1200px;
+                width: 190px; height: 190px;
+                margin: 0.5rem auto 1.2rem;
+            }}
+            .coin {{
+                width: 100%; height: 100%;
+                position: relative;
+                transform-style: preserve-3d;
+                transform: rotateY({end_deg}deg);
+                {"animation: " + anim + " 1.4s cubic-bezier(.25,.75,.35,1) forwards;" if result else ""}
+            }}
+            .coin-face {{
+                position: absolute; inset: 0;
+                border-radius: 50%;
+                backface-visibility: hidden;
+                display: flex; align-items: center; justify-content: center;
+                font-weight: 800; font-size: 1.3rem; letter-spacing: .5px;
+                background: radial-gradient(circle at 32% 28%, #fff6d0, #e6c14d 45%, #b8860b 85%, #8a6d1f 100%);
+                border: 5px solid #96720f;
+                box-shadow: 0 10px 28px rgba(0,0,0,.35), inset 0 0 22px rgba(255,255,255,.45);
+                color: #5b4300;
+            }}
+            .coin-back {{ transform: rotateY(180deg); }}
+            @keyframes {anim} {{
+                0%   {{ transform: rotateY(0deg); }}
+                100% {{ transform: rotateY({total_deg}deg); }}
+            }}
+            </style>
+            <div class="coin-scene">
+              <div class="coin">
+                <div class="coin-face coin-front">ОРЁЛ</div>
+                <div class="coin-face coin-back">РЕШКА</div>
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        if result == "edge":
+            st.markdown(
+                """
+                <div style="text-align:center;margin-top:-0.5rem;">
+                  <span style="background:linear-gradient(135deg,#ff2d7b,#b84dff);
+                        color:#fff;padding:.5rem 1.1rem;border-radius:999px;
+                        font-weight:800;font-size:1.1rem;">
+                  :material/bolt: РЕБРО! Это очень редкий исход
+                  </span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        elif result == "heads":
+            st.markdown("<div style='text-align:center;font-weight:700;font-size:1.2rem;'>:material/check_circle: Орёл</div>", unsafe_allow_html=True)
+        elif result == "tails":
+            st.markdown("<div style='text-align:center;font-weight:700;font-size:1.2rem;'>:material/check_circle: Решка</div>", unsafe_allow_html=True)
+        else:
+            st.markdown("<div style='text-align:center;color:#64748b;'>Нажмите кнопку, чтобы подбросить</div>", unsafe_allow_html=True)
+
+    with col_stats:
+        stats = get_stats()
+        st.markdown("**:material/monitoring: Статистика раздела**")
+        st.metric("Просмотров страницы", stats["page_views"])
+        st.metric("Подбросов всего", stats["total_flips"])
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Орёл", stats["heads"])
+        c2.metric("Решка", stats["tails"])
+        c3.metric(":material/bolt: Ребро", stats["edge"])
+        if stats["total_flips"] > 0:
+            edge_rate = stats["edge"] / stats["total_flips"]
+            st.caption(f"Фактическая доля рёбер: {edge_rate:.3%}")
+        st.caption(
+            "Счётчики хранятся локально в data/coin_stats.json. "
+            "На Streamlit Community Cloud сбрасываются при редеплое контейнера — "
+            "для устойчивой веб-аналитики понадобится внешний сервис "
+            "(Plausible / Google Analytics)."
+        )
+
 elif page == ":material/volunteer_activism: Донат":
     try:
         from app_pages._donate import render_donate_page
