@@ -1,0 +1,57 @@
+name: Retrain Stock Model
+
+# Переобучает LightGBM-модель (scripts/train_lgbm.py: purged/embargoed CV +
+# честный OOS-холдаут 2024-2026) и коммитит обновлённые артефакты обратно в
+# data/artifacts/lgbm/. Раннер GitHub Actions имеет полный доступ в интернет
+# (в отличие от песочницы, где эти файлы редактируются), поэтому фактическое
+# обучение с загрузкой котировок с Yahoo Finance выполняется здесь.
+#
+# Запустить вручную: вкладка Actions -> Retrain Stock Model -> Run workflow.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 1"   # каждый понедельник в 03:00 UTC
+
+permissions:
+  contents: write
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements_full.txt
+
+      - name: Train LightGBM model (purged CV + true OOS holdout)
+        run: python scripts/train_lgbm.py
+
+      - name: Show train summary
+        if: always()
+        run: |
+          if [ -f data/artifacts/lgbm/train_summary.json ]; then
+            cat data/artifacts/lgbm/train_summary.json
+          fi
+
+      - name: Commit updated artifacts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/artifacts/lgbm/
+          if git diff --cached --quiet; then
+            echo "Модель не изменилась — коммит не нужен."
+          else
+            git commit -m "chore: переобучение stock-модели (purged CV) [skip ci]"
+            git push
+          fi
