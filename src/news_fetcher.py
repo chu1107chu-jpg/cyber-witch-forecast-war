@@ -10,10 +10,12 @@ from __future__ import annotations
 
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 import feedparser
+import requests
 
 # ──────────────────────────────────────────────
 #  RSS-источники
@@ -154,23 +156,62 @@ def _score_entry(text: str) -> list[tuple[str, float, str]]:
     return [(factor, delta, matched) for factor, (delta, matched) in hits.items()]
 
 
-def fetch_news(max_per_feed: int = 30, timeout: int = 8) -> list[NewsEvent]:
+def _fetch_one_feed(source_name: str, url: str, timeout: int) -> tuple[str, list]:
     """
-    Скачивает новости из RSS_FEEDS.
+    Скачивает и парсит один RSS-фид с жёстким таймаутом на HTTP-запрос.
+    feedparser.parse(url) сам по себе НЕ соблюдает timeout (использует
+    urllib с сокет-таймаутом по умолчанию, который на некоторых хостингах
+    может занимать десятки секунд на один недоступный/заблокированный источник —
+    из-за этого при 7 фидах кнопка "Анализ новых новостей" могла зависать на
+    минуты). Поэтому качаем сырые байты через requests с timeout=, а
+    парсим уже локально.
+    """
+    try:
+        resp = requests.get(
+            url,
+            timeout=timeout,
+            headers={"User-Agent": "Mozilla/5.0 (IvpnBot/1.0; conflict-forecast)"},
+        )
+        resp.raise_for_status()
+        feed = feedparser.parse(resp.content)
+        return source_name, list(feed.entries or [])
+    except Exception:
+        return source_name, []
+
+
+def fetch_news(max_per_feed: int = 30, timeout: int = 6) -> list[NewsEvent]:
+    """
+    Скачивает новости из RSS_FEEDS параллельно (ThreadPoolExecutor), с
+    жёстким таймаутом на каждый источник — один недоступный фид больше не
+    может подвесить всю загрузку. Худший случай ~timeout секунд вместо
+    timeout × число_фидов при последовательной загрузке.
     Возвращает список NewsEvent для Иран-релевантных статей с рассчитанным δ.
     Более новые статьи — первые в списке.
     """
     events: list[NewsEvent] = []
     seen_titles: set[str] = set()
 
-    for source_name, url in RSS_FEEDS.items():
+    fetched: dict[str, list] = {}
+    with ThreadPoolExecutor(max_workers=len(RSS_FEEDS)) as pool:
+        futures = {
+            pool.submit(_fetch_one_feed, source_name, url, timeout): source_name
+            for source_name, url in RSS_FEEDS.items()
+        }
         try:
-            feed = feedparser.parse(url, request_headers={
-                "User-Agent": "Mozilla/5.0 (IvpnBot/1.0; conflict-forecast)"
-            })
-            entries = (feed.entries or [])[:max_per_feed]
+            for fut in as_completed(futures, timeout=timeout + 5):
+                try:
+                    source_name, entries = fut.result()
+                    fetched[source_name] = entries
+                except Exception:
+                    continue
         except Exception:
-            continue
+            # as_completed сам может кинуть TimeoutError, если что-то не
+            # уложилось даже в timeout+5 (напр. завис DNS-резолв) —
+            # работаем с тем, что успело прийти, не подвешивая страницу.
+            pass
+
+    for source_name in RSS_FEEDS:
+        entries = fetched.get(source_name, [])[:max_per_feed]
 
         for entry in entries:
             title   = getattr(entry, "title",   "")

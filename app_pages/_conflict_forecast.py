@@ -1014,38 +1014,35 @@ def render_conflict_page():
                 unsafe_allow_html=True,
             )
 
-            # ── Рыночные сигналы ───────────────────────────────────────────────
-            if _market is not None and (
-                _market.brent_usd is not None
-                or _market.polymarket_p_conflict is not None
-                or _market.metaculus_community_p is not None
-            ):
-                _mkt_parts = []
-                if _market.brent_usd is not None:
-                    _mkt_parts.append(f"° Brent: {format_brent(_market)}")
-                if _market.lng_usd is not None:
-                    _mkt_parts.append(f"° LNG: {format_lng(_market)}")
-                if _market.polymarket_p_conflict is not None:
-                    _pm_url = _market.polymarket_url or "https://polymarket.com"
-                    _mkt_parts.append(
-                        f"° <a href='{_pm_url}' target='_blank' style='text-decoration:none;color:inherit;'>"
-                        f"Polymarket ↗</a>: {format_polymarket(_market)}"
-                    )
-                if _market.metaculus_community_p is not None:
-                    _mc_url = _market.metaculus_url or "https://metaculus.com"
-                    _mkt_parts.append(
-                        f"° <a href='{_mc_url}' target='_blank' style='text-decoration:none;color:inherit;'>"
-                        f"Metaculus ↗</a>: {format_metaculus(_market)}"
-                    )
-                st.markdown(
-                    f"""<div style="background:rgba(255,255,255,0.45);border-radius:12px;
-                    padding:.6rem 1rem;margin-bottom:.6rem;font-size:.82rem;
-                    border:1px solid rgba(255,255,255,0.65);">
-                    <b>:material/trending_up: Рыночные сигналы</b>&nbsp;<span style='color:#64748b;font-size:.75rem;'>(кэш 30 мин)</span><br>
-                    <span style='color:#64748b;'>{'  &nbsp; '.join(_mkt_parts)}</span>
-                    </div>""",
-                    unsafe_allow_html=True,
-                )
+            # ── Рыночные сигналы и прогнозы аналитиков (Polymarket/Metaculus) ──
+            # Раньше блок целиком прятался, если хоть один из источников не
+            # отвечал (частый случай — Polymarket/Metaculus периодически
+            # недоступны или закрывают конкретный рынок) — из-за этого раздел
+            # с прогнозами аналитиков/рынков выглядел так, будто пропал вовсе.
+            # Теперь показываем блок всегда, с "—" по источникам, которые
+            # сейчас недоступны.
+            _pm_url = (_market.polymarket_url if _market else "") or "https://polymarket.com"
+            _mc_url = (_market.metaculus_url if _market else "") or "https://metaculus.com"
+            _mkt_parts = [
+                f"° Brent: {format_brent(_market) if _market else '—'}",
+                f"° LNG: {format_lng(_market) if _market else '—'}",
+                f"° <a href='{_pm_url}' target='_blank' style='text-decoration:none;color:inherit;'>"
+                f"Polymarket ↗</a> (прогноз рынка): {format_polymarket(_market) if _market else '—'}",
+                f"° <a href='{_mc_url}' target='_blank' style='text-decoration:none;color:inherit;'>"
+                f"Metaculus ↗</a> (прогноз аналитиков-суперпрогнозистов): {format_metaculus(_market) if _market else '—'}",
+            ]
+            st.markdown(
+                f"""<div style="background:rgba(255,255,255,0.45);border-radius:12px;
+                padding:.6rem 1rem;margin-bottom:.6rem;font-size:.82rem;
+                border:1px solid rgba(255,255,255,0.65);">
+                <b>:material/trending_up: Рыночные сигналы и прогнозы аналитиков</b>&nbsp;<span style='color:#64748b;font-size:.75rem;'>(кэш 30 мин)</span><br>
+                <span style='color:#64748b;'>{'  &nbsp; '.join(_mkt_parts)}</span>
+                </div>""",
+                unsafe_allow_html=True,
+            )
+            if _market is None:
+                st.caption(":material/wifi_off: Сейчас не удалось достучаться до внешних источников (Polymarket/Metaculus/Brent) — попробуйте обновить страницу позже.")
+            else:
                 # Предупреждение при принципиальном расхождении
                 _cal_note = market_calibration_note(_market, p)
                 if _cal_note:

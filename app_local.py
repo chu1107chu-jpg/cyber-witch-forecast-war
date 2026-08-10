@@ -116,6 +116,12 @@ div[data-testid="stDataFrame"] {
     border-radius: 12px;
     padding: .6rem .8rem;
 }
+div[data-testid="stMetric"] {
+    min-height: 92px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
 div[data-testid="stAlert"] {
     background: #ffffff;
     border: 1px solid #e3e6eb;
@@ -804,10 +810,6 @@ elif page == ":material/toll: Монетка":
     _is_owner = st.query_params.get("owner") == _COIN_OWNER_KEY
 
     st.title(":material/toll: Монетка")
-    st.caption(
-        "Подбрасываем виртуальную монету. Почти всегда — орёл или решка, "
-        "но примерно 1 раз из 2000 монета встаёт на ребро."
-    )
 
     if not st.session_state.get("_coin_view_counted"):
         record_page_view()
@@ -823,6 +825,11 @@ elif page == ":material/toll: Монетка":
         col_coin = st.container()
 
     with col_coin:
+        # Резервируем место под монету сверху, а кнопку рисуем ниже в коде —
+        # так кнопка физически оказывается ПОД монетой, хотя клик по ней
+        # (и сам подброс) обрабатывается раньше, до отрисовки итоговой монеты.
+        _coin_slot = st.container()
+
         if st.button(":material/casino: Подбросить монету", type="primary", use_container_width=True):
             result, _ = flip_coin()
             st.session_state["_coin_result"] = result
@@ -837,59 +844,60 @@ elif page == ":material/toll: Монетка":
         total_deg = spins + end_deg if result else 0
         anim = "coin-spin-idle" if not result else f"coin-spin-{n}"
 
-        st.markdown(
-            f"""
-            <style>
-            .coin-scene {{
-                perspective: 1200px;
-                width: 190px; height: 190px;
-                margin: 0.5rem auto 1.2rem;
-            }}
-            .coin {{
-                width: 100%; height: 100%;
-                position: relative;
-                transform-style: preserve-3d;
-                transform: rotateY({end_deg}deg);
-                {"animation: " + anim + " 1.4s cubic-bezier(.25,.75,.35,1) forwards;" if result else ""}
-            }}
-            .coin-face {{
-                position: absolute; inset: 0;
-                border-radius: 50%;
-                backface-visibility: hidden;
-                display: flex; align-items: center; justify-content: center;
-                font-weight: 800; font-size: 1.3rem; letter-spacing: .5px;
-                background: radial-gradient(circle at 32% 28%, #fff6d0, #e6c14d 45%, #b8860b 85%, #8a6d1f 100%);
-                border: 5px solid #96720f;
-                box-shadow: 0 10px 28px rgba(0,0,0,.35), inset 0 0 22px rgba(255,255,255,.45);
-                color: #5b4300;
-            }}
-            .coin-back {{ transform: rotateY(180deg); }}
-            @keyframes {anim} {{
-                0%   {{ transform: rotateY(0deg); }}
-                100% {{ transform: rotateY({total_deg}deg); }}
-            }}
-            </style>
-            <div class="coin-scene">
-              <div class="coin">
-                <div class="coin-face coin-front">ОРЁЛ</div>
-                <div class="coin-face coin-back">РЕШКА</div>
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        if result == "edge":
+        with _coin_slot:
             st.markdown(
-                ":violet-badge[:material/bolt: РЕБРО! Это очень редкий исход]",
-                text_alignment="center",
+                f"""
+                <style>
+                .coin-scene {{
+                    perspective: 1200px;
+                    width: 190px; height: 190px;
+                    margin: 0.5rem auto 1.2rem;
+                }}
+                .coin {{
+                    width: 100%; height: 100%;
+                    position: relative;
+                    transform-style: preserve-3d;
+                    transform: rotateY({end_deg}deg);
+                    {"animation: " + anim + " 1.4s cubic-bezier(.25,.75,.35,1) forwards;" if result else ""}
+                }}
+                .coin-face {{
+                    position: absolute; inset: 0;
+                    border-radius: 50%;
+                    backface-visibility: hidden;
+                    display: flex; align-items: center; justify-content: center;
+                    font-weight: 800; font-size: 1.3rem; letter-spacing: .5px;
+                    background: radial-gradient(circle at 32% 28%, #fff6d0, #e6c14d 45%, #b8860b 85%, #8a6d1f 100%);
+                    border: 5px solid #96720f;
+                    box-shadow: 0 10px 28px rgba(0,0,0,.35), inset 0 0 22px rgba(255,255,255,.45);
+                    color: #5b4300;
+                }}
+                .coin-back {{ transform: rotateY(180deg); }}
+                @keyframes {anim} {{
+                    0%   {{ transform: rotateY(0deg); }}
+                    100% {{ transform: rotateY({total_deg}deg); }}
+                }}
+                </style>
+                <div class="coin-scene">
+                  <div class="coin">
+                    <div class="coin-face coin-front">ОРЁЛ</div>
+                    <div class="coin-face coin-back">РЕШКА</div>
+                  </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
             )
-        elif result == "heads":
-            st.markdown("#### :material/check_circle: Орёл", text_alignment="center")
-        elif result == "tails":
-            st.markdown("#### :material/check_circle: Решка", text_alignment="center")
-        else:
-            st.markdown("<div style='text-align:center;color:#64748b;'>Нажмите кнопку, чтобы подбросить</div>", unsafe_allow_html=True)
+
+            if result == "edge":
+                st.markdown(
+                    ":violet-badge[:material/bolt: РЕБРО! Это очень редкий исход]",
+                    text_alignment="center",
+                )
+            elif result == "heads":
+                st.markdown("#### :material/check_circle: Орёл", text_alignment="center")
+            elif result == "tails":
+                st.markdown("#### :material/check_circle: Решка", text_alignment="center")
+            else:
+                st.markdown("<div style='text-align:center;color:#64748b;'>Нажмите кнопку, чтобы подбросить</div>", unsafe_allow_html=True)
 
     if _is_owner:
         with col_stats:
