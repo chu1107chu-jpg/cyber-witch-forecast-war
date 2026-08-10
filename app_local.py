@@ -426,6 +426,11 @@ except Exception as e:
     st.error(f"Не удалось загрузить модели: {e}")
     st.info("Запусти `python scripts/train_now.py` для обучения.")
 
+try:
+    macro_data = fetch_macro()
+except Exception:
+    macro_data = pd.DataFrame()
+
 
 # ═══════════════════════════════════════════════
 #  СТРАНИЦА: ДАШБОРД
@@ -789,7 +794,7 @@ elif page == ":material/toll: Монетка":
     st.title(":material/toll: Монетка")
     st.caption(
         "Подбрасываем виртуальную монету. Почти всегда — орёл или решка, "
-        "но примерно 1 раз из ~400 монета встаёт на ребро."
+        "но примерно 1 раз из 2000 монета встаёт на ребро."
     )
 
     if not st.session_state.get("_coin_view_counted"):

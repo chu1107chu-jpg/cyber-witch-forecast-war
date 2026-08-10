@@ -26,7 +26,11 @@ if _SRC not in sys.path:
     sys.path.insert(0, _SRC)
 
 try:
-    from news_fetcher import fetch_news, aggregate_deltas as _aggregate_deltas
+    from news_fetcher import (
+        fetch_news,
+        aggregate_deltas as _aggregate_deltas,
+        bayesian_update as _bayesian_update,
+    )
     from ivpn_history import (
         load_history, make_snapshot, append_snapshot,
         should_save, build_chart_data,
