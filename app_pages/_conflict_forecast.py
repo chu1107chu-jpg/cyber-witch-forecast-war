@@ -616,7 +616,7 @@ def render_conflict_page():
             if _NEWS_AVAILABLE:
                 _btn_col, _status_col = st.columns([1, 3])
                 _fetch_clicked = _btn_col.button(
-                    "� Анализ новых новостей",
+                    ":material/refresh: Анализ новых новостей",
                     type="primary",
                     help="Загружает RSS ТАСС, RT, BBC — фильтрует иранскую тему и пересчитывает уровень напряжённости по свежим событиям",
                 )
@@ -1404,7 +1404,7 @@ def render_conflict_page():
         else:
             _records = load_history()
             if not _records:
-                st.info("История пуста. Нажмите «� Анализ новых новостей» на вкладке 🇮🇷🆚🇺🇸 Иран / США.")
+                st.info("История пуста. Нажмите «:material/refresh: Анализ новых новостей» на вкладке 🇮🇷🆚🇺🇸 Иран / США.")
             else:
                 _cd = build_chart_data(_records)
                 _fig_hist = go.Figure()
