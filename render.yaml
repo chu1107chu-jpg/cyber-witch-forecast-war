@@ -1,0 +1,16 @@
+# Render Blueprint: деплой игры «Политическая арена» как отдельного сервиса.
+# Streamlit Community Cloud отдаёт наружу только один порт (само Streamlit-приложение),
+# поэтому FastAPI-сервер игры живёт отдельно, а в Streamlit встраивается через iframe.
+services:
+  - type: web
+    name: political-arena
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements_game.txt
+    startCommand: uvicorn game.server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      # Необязательно: токен Telegram-бота для входа через Telegram.
+      - key: TG_BOT_TOKEN
+        sync: false

@@ -324,21 +324,11 @@ with st.sidebar:
 
     page = st.radio(
         "Раздел",
-        [":material/dashboard: Дашборд", ":material/search: Тикер", ":material/swords: Конфликты", ":material/toll: Монетка", ":material/volunteer_activism: Донат"],
+        [":material/dashboard: Дашборд", ":material/search: Тикер", ":material/swords: Конфликты", ":material/toll: Монетка", ":material/sports_esports: Игра", ":material/volunteer_activism: Донат"],
         label_visibility="collapsed",
     )
     st.divider()
 
-    st.markdown(
-        '<a href="/arena/" target="_blank" style="'
-        "display:block;text-align:center;padding:12px;margin:8px 0;"
-        "background:#0052f1;"
-        "color:#fff;border-radius:12px;text-decoration:none;"
-        "font-weight:500;font-size:14px;"
-        'letter-spacing:.5px;">:material/sports_esports: ПОЛИТИЧЕСКАЯ АРЕНА</a>',
-        unsafe_allow_html=True,
-    )
-    st.divider()
 
     if page == ":material/search: Тикер":
         market_filter = st.radio("Рынок", ["🇺🇸 США", "🇷🇺 Россия"], horizontal=True)
@@ -845,6 +835,13 @@ elif page == ":material/toll: Монетка":
                 "для устойчивой веб-аналитики понадобится внешний сервис "
                 "(Plausible / Google Analytics)."
             )
+
+elif page == ":material/sports_esports: Игра":
+    try:
+        from app_pages._game import render_game_page
+        render_game_page()
+    except Exception as e:
+        st.error(f"Не удалось загрузить раздел «Игра»: {e}")
 
 elif page == ":material/volunteer_activism: Донат":
     try:
