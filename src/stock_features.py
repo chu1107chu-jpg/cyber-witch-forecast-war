@@ -22,7 +22,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-# Порядок и состав признаков — как в data/artifacts/lgbm/train_summary.json
+# Порядок и состав признаков — ровно как в задеплоенной модели (data/artifacts/lgbm/feature_cols.pkl, 39 шт.).
+# mom_5_20 считается в build_features, но в модель не входит: отношение ret5/|ret20| взрывается при ret20≈0.
 FEATURE_COLS = [
     "ret1", "ret2", "ret3", "ret5", "ret10", "ret20", "log_ret1",
     "rsi14", "macd_h", "macd_sign", "atr14", "bb_pos", "bb_width",
@@ -30,7 +31,7 @@ FEATURE_COLS = [
     "ma10_ratio", "ma20_ratio", "ma50_ratio", "ma200_ratio",
     "dist_hi52", "dist_lo52", "hl52_range",
     "vol_rel", "vol_spike",
-    "mom10", "mom20", "mom_cross", "ma_cross_20_50", "mom_5_20",
+    "mom10", "mom20", "mom_cross", "ma_cross_20_50",
     "day_of_week", "month", "week_of_year",
     "vix_z", "vix_ret", "tnx_z", "tnx_ret", "dxy_z", "dxy_ret",
 ]

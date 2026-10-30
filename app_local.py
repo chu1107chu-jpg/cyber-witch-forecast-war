@@ -28,6 +28,10 @@ _SRC_DIR = os.path.join(os.path.dirname(__file__), "src")
 if _SRC_DIR not in sys.path:
     sys.path.insert(0, _SRC_DIR)
 from stock_features import build_features as _shared_build_features
+import auto_retrain as _auto_retrain
+
+# Секрет для владельца: ?owner=<ключ> показывает приватные блоки (статистика монетки, управление моделью)
+OWNER_KEY = "liza-coin-2026"
 
 # ─────────────────────────────────────────────
 #  Константы
@@ -249,11 +253,14 @@ def explain_price(last_close: float, delta_pct: float) -> str:
 #  Загрузка моделей и макро (кэш)
 # ─────────────────────────────────────────────
 @st.cache_resource(show_spinner="Загружаю модели…")
-def load_models():
-    models   = joblib.load(ARTIFACTS / "models.pkl")
-    features = joblib.load(ARTIFACTS / "feature_cols.pkl")
-    with open(ARTIFACTS / "train_summary.json") as f:
+def load_models(_version: float = 0.0):
+    """_version — mtime переобученной модели: смена значения сбрасывает кэш и подхватывает новую."""
+    art = _auto_retrain.pick_artifacts_dir(ARTIFACTS_LGBM) if USING_LGBM else ARTIFACTS
+    models   = joblib.load(art / "models.pkl")
+    features = joblib.load(art / "feature_cols.pkl")
+    with open(art / "train_summary.json", encoding="utf-8") as f:
         summary = json.load(f)
+    summary["_source"] = "live" if art == _auto_retrain.LIVE_DIR else "repo"
     return models, features, summary
 
 
@@ -329,6 +336,28 @@ with st.sidebar:
     )
     st.divider()
 
+    if st.query_params.get("owner") == OWNER_KEY and USING_LGBM:
+        @st.fragment(run_every=3)
+        def _model_admin():
+            stt = _auto_retrain.STATE
+            _age = _auto_retrain.model_age_days(ARTIFACTS_LGBM)
+            _src = "переобучена в приложении" if _auto_retrain.live_version() else "из репозитория"
+            with st.expander(":material/model_training: Модель (только владелец)"):
+                st.caption(f"Возраст: {_age:.1f} дн. · {_src}" if _age is not None else "Возраст неизвестен")
+                if stt["running"]:
+                    st.info("Идёт обучение…", icon=":material/hourglass_top:")
+                    if stt["log"]:
+                        st.code("\n".join(stt["log"][-6:]), language=None)
+                else:
+                    if stt["last_error"]:
+                        st.error(stt["last_error"], icon=":material/error:")
+                    elif stt["finished_at"]:
+                        st.success("Обучение завершено. Новая модель подхватится при следующем действии.", icon=":material/check_circle:")
+                    if st.button("Переобучить сейчас", icon=":material/refresh:", key="retrain_now"):
+                        _auto_retrain.start(force=True)
+                        st.rerun(scope="fragment")
+        _model_admin()
+
 
     if page == ":material/search: Тикер":
         market_filter = st.radio("Рынок", ["🇺🇸 США", "🇷🇺 Россия"], horizontal=True)
@@ -349,12 +378,19 @@ with st.sidebar:
 #  Загружаем модели
 # ─────────────────────────────────────────────
 try:
-    models, feature_cols, train_summary = load_models()
+    models, feature_cols, train_summary = load_models(_auto_retrain.live_version())
     models_loaded = True
 except Exception as e:
     models_loaded = False
     st.error(f"Не удалось загрузить модели: {e}")
     st.info("Запусти `python scripts/train_now.py` для обучения.")
+
+# Автопереобучение: если модель старше 7 дней — тихо переобучаем в фоне (GitHub Actions не нужны)
+if USING_LGBM:
+    try:
+        _auto_retrain.maybe_start(ARTIFACTS_LGBM)
+    except Exception:
+        pass
 
 try:
     macro_data = fetch_macro()
@@ -723,8 +759,7 @@ elif page == ":material/toll: Монетка":
 
     # Статистика раздела (просмотры/подбросы) видна только владельцу проекта —
     # добавь ?owner=liza-coin-2026 к ссылке, чтобы увидеть цифры.
-    _COIN_OWNER_KEY = "liza-coin-2026"
-    _is_owner = st.query_params.get("owner") == _COIN_OWNER_KEY
+    _is_owner = st.query_params.get("owner") == OWNER_KEY
 
     st.title(":material/toll: Монетка")
 
