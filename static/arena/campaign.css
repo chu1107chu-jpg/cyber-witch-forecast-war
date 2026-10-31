@@ -340,3 +340,10 @@
   .camp-panel { min-height: 260px; }
   .camp-endturn { position: static; }
 }
+
+@media (max-width: 440px) {
+  .header { padding-left: 10px; padding-right: 10px; }
+  .header h1 { font-size: 11px; line-height: 1.1; }
+  .header-right { gap: 6px; }
+  .free-badge { display: none; }
+}

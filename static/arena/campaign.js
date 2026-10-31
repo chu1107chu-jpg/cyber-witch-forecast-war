@@ -1,19 +1,12 @@
-/* ═══════════════════════════════════════════════════════════════
-   POLITICAL ARENA — кампания (стратегия на карте)
-   Чистая логика без DOM: карта, экономика, найм, строительство, захват регионов,
-   ходы ИИ. Бои считаются движком engine.js (игрок бьётся сам, чужие — автоматом).
-   Карта вымышленная: 30 регионов, 4 фракции (ты + 3 ИИ), нейтральные земли.
-   ═══════════════════════════════════════════════════════════════ */
 (function (root) {
   'use strict';
   const E = root.ArenaEngine || (typeof require !== 'undefined' ? require('./engine.js') : null);
   const roster = () => root.ARENA_FIGHTERS || [];
   const byId = (id) => roster().find(f => f.id === id);
 
-  // ── Константы ────────────────────────────────────────────────
   const W = 6, H = 5, N = W * H;
   const MAX_TURNS = 60;
-  const WIN_REGIONS = N / 2;                         // половина карты: 15 из 30
+  const WIN_REGIONS = N / 2;
   const START_GOLD = 100;
   const WOUND_TURNS = 2;
   const MAX_ATTACKS_AI = 3;
@@ -50,10 +43,8 @@
     base:   { name: 'База',  cost: 100, icon: '⚔️', desc: 'гарнизон +10% HP, атака из региона +3 ATK, раненые лечатся за ход' },
   };
   const MARKET_BONUS = 12;
-  // цена найма и содержание в ход — по редкости бойца
   const RECRUIT = { common: [35, 3], uncommon: [50, 4], rare: [70, 5], epic: [100, 7], legendary: [140, 9] };
 
-  // ── Геометрия ────────────────────────────────────────────────
   const idx = (x, y) => y * W + x;
   const xy = (i) => [i % W, Math.floor(i / W)];
   function neighbors(i) {
@@ -66,7 +57,6 @@
   }
   const dist = (a, b) => { const [ax, ay] = xy(a), [bx, by] = xy(b); return Math.abs(ax - bx) + Math.abs(ay - by); };
 
-  // ── Нейтральные гарнизоны (ополчение: вымышленные, не из списка бойцов) ──
   const SHIELD = 'data:image/svg+xml;utf8,' + encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#2a2f45"/>' +
     '<text x="50" y="68" font-size="56" text-anchor="middle">🛡️</text></svg>');
@@ -86,12 +76,11 @@
       moves: MILITIA_MOVES, gradient: 'linear-gradient(135deg,#2a2f45,#3a3f55)',
     };
   }
-  function fighterData(G, id) { // роспись бойца по id (роспись или ополчение)
+  function fighterData(G, id) {
     if (id && id.startsWith('militia_')) return militia(G.regions[parseInt(id.slice(8), 10)]);
     return byId(id);
   }
 
-  // ── Создание кампании ────────────────────────────────────────
   function newCampaign(leaderId, seed, diff) {
     diff = DIFFS[diff] ? diff : 'normal';
     seed = seed == null ? (Date.now() & 0x7fffffff) : seed;
@@ -134,7 +123,6 @@
     return { v: 2, seed, diff, turn: 1, regions, factions, log: [], over: null };
   }
 
-  // ── Запросы ──────────────────────────────────────────────────
   const player = (G) => G.factions[PLAYER];
   const regionsOf = (G, fid) => G.regions.filter(r => r.owner === fid);
   const refOf = (G, fid, id) => G.factions[fid].fighters.find(f => f.id === id) || null;
@@ -148,13 +136,11 @@
   const upkeep = (G, fid) => G.factions[fid].fighters.filter(r => !r.commander).reduce((s, r) => s + upkeepOf(byId(r.id)), 0);
   const netIncome = (G, fid) => income(G, fid) - upkeep(G, fid);
 
-  /** Бойцы, доступные к найму (никто ещё не нанял и не лидер). */
   function availableMercs(G) {
     const taken = new Set(Object.values(G.factions).flatMap(f => f.fighters.map(r => r.id)));
     return roster().filter(f => !taken.has(f.id)).sort((a, b) => priceOf(a) - priceOf(b) || a.name.localeCompare(b.name));
   }
 
-  /** Боец с модификаторами для боя (уровень, ранение, командир, местность, столица, постройки). */
   function combatant(G, ref, region, asDefender) {
     const base = fighterData(G, ref.id);
     const notes = [];
@@ -178,7 +164,6 @@
     return { fighter: Object.assign({}, base, { hp: Math.round(base.hp * hpMult), atk: base.atk + atkAdd, def: base.def + defAdd }), notes };
   }
 
-  /** Кто защищает регион: {ref, faction, base} | 'militia' | null (пусто). */
   function defenderOf(G, to) {
     if (to.garrison) return { ref: refOf(G, to.owner, to.garrison), faction: to.owner };
     if (to.owner === null) return { ref: { id: 'militia_' + to.id, wounded: 0, acted: false, commander: false }, faction: null, neutral: true };
@@ -191,7 +176,7 @@
     if (!own.length) return -1;
     const loc = locationOf(G, fid, fighterId);
     if (loc >= 0) return own.includes(loc) ? loc : -1;          // гарнизон бьёт только соседей своего региона
-    return own.find(n => G.regions[n].building === 'base') ?? own[0];   // резерв — из любого приграничного
+    return own.find(n => G.regions[n].building === 'base') ?? own[0];
   }
 
   function attackCheck(G, fid, fighterId, toIdx) {
@@ -207,7 +192,6 @@
     return '';
   }
 
-  /** Подготовка боя: бойцы с бонусами и оценка шансов. */
   function prepareBattle(G, fid, fighterId, toIdx) {
     const err = attackCheck(G, fid, fighterId, toIdx);
     if (err) return { error: err };
@@ -222,10 +206,8 @@
     };
   }
 
-  // ── Итог боя ─────────────────────────────────────────────────
   function addLog(G, text) { G.log.unshift(text); G.log = G.log.slice(0, 60); }
 
-  /** Применяет исход боя. Победитель занимает регион; проигравший ранен и остаётся где был. Возвращает отчёт. */
   function resolveBattle(G, fid, fighterId, toIdx, attackerWon) {
     const to = G.regions[toIdx];
     const defFid = to.owner;
@@ -241,9 +223,9 @@
       if (d && d.ref && !d.neutral) { d.ref.wounded = WOUND_TURNS; d.ref.acted = true; }
       const wasCapital = defFid && G.factions[defFid].capital === to.id;
       const loc = locationOf(G, fid, fighterId);
-      if (loc >= 0) G.regions[loc].garrison = null;          // гарнизон ушёл в наступление — его регион опустел
+      if (loc >= 0) G.regions[loc].garrison = null;
       to.owner = fid; to.garrison = fighterId;
-      if (to.building === 'base') to.building = null;       // база уничтожена при захвате
+      if (to.building === 'base') to.building = null;
       G.factions[fid].gold += loot;
       rep.captured = true; rep.loot = loot;
       rep.text = `${attName} захватывает «${to.name}»${defFid ? ` у ${G.factions[defFid].name}` : ''} (+${loot}₲)`;
@@ -273,7 +255,6 @@
     }
   }
 
-  /** Бой без участия игрока (ходы ИИ и защита игрока). skillful — тестовый «умный» игрок: читает подсказку. */
   function autoBattle(G, fid, fighterId, toIdx, rng, skillful) {
     const pb = prepareBattle(G, fid, fighterId, toIdx);
     if (pb.error) return null;
@@ -292,7 +273,6 @@
     return av.sort((a, b) => b.base_dmg * b.accuracy - a.base_dmg * a.accuracy)[0].index;
   }
 
-  // ── Действия игрока и ИИ ─────────────────────────────────────
   function recruit(G, fid, fighterId) {
     const f = G.factions[fid], data = byId(fighterId);
     if (!data) return { ok: false, error: 'Боец не найден' };
@@ -324,7 +304,6 @@
     return { ok: true };
   }
 
-  /** Назначить бойца в свой регион (с резерва — бесплатно; из другого региона — тратит действие). */
   function assign(G, fid, fighterId, regionIdx) {
     const ref = refOf(G, fid, fighterId), r = G.regions[regionIdx];
     if (!ref) return { ok: false, error: 'Боец не из твоей армии' };
@@ -359,7 +338,6 @@
     return { ok: true, cost: b.cost };
   }
 
-  /** «Покупка» нейтрального соседнего региона без боя. */
   function buyPrice(G, regionIdx) { const r = G.regions[regionIdx]; return Math.round(40 + 55 * r.power + regionIncome(r) * 3); }
   function buyRegion(G, fid, regionIdx) {
     const f = G.factions[fid], r = G.regions[regionIdx];
@@ -372,13 +350,11 @@
     return { ok: true, price };
   }
 
-  // ── Начало хода: доход, содержание, лечение ──────────────────
   function startOfTurn(G, fid, rep) {
     const f = G.factions[fid];
     if (f.eliminated) return;
     const inc = income(G, fid), up = upkeep(G, fid);
     f.gold += inc - up;
-    // не хватает денег — самый дешёвый наёмник уходит
     while (f.gold < 0) {
       const mercs = f.fighters.filter(r => !r.commander).sort((a, b) => upkeepOf(byId(a.id)) - upkeepOf(byId(b.id)));
       if (!mercs.length) { f.gold = 0; break; }
@@ -395,20 +371,17 @@
     return { income: inc, upkeep: up };
   }
 
-  // ── ИИ ───────────────────────────────────────────────────────
   function aiTurn(G, fid, rng, rep) {
     if (G.factions[fid].eliminated) return;
     startOfTurn(G, fid, rep);
     aiAct(G, fid, rng, rep);
   }
-  /** Действия ИИ-фракции без начисления дохода (им же пользуются боты в тестах). opts.skill — «умный» игрок. */
   function aiAct(G, fid, rng, rep, opts) {
     opts = opts || {};
     const f = G.factions[fid];
     if (f.eliminated) return;
     const minOdds = opts.minOdds != null ? opts.minOdds : DIFFS[G.diff || 'normal'].aiMinOdds;
 
-    // найм: армия растёт вместе с территорией
     const regs0 = regionsOf(G, fid);
     const want = Math.min(regs0.length + 1, 8);
     if (f.gold >= 80 && f.fighters.length < want) {
@@ -418,20 +391,17 @@
         recruit(G, fid, best[Math.floor(rng.random() * best.length)].id);
       }
     }
-    // тренировка: излишки золота превращаются в силу
     for (let k = 0; k < 3 && f.gold >= 160; k++) {
       const cand = f.fighters.filter(r => (r.lvl || 0) < MAX_LVL).sort((a, b) => (a.lvl || 0) - (b.lvl || 0));
       if (!cand.length || f.gold < trainCost(cand[0]) + 60) break;
       train(G, fid, cand[0].id);
     }
-    // резерв → пустые регионы (столица и граница в первую очередь)
     const bench = f.fighters.filter(r => locationOf(G, fid, r.id) < 0 && r.wounded === 0)
       .sort((a, b) => (b.commander ? 1 : 0) - (a.commander ? 1 : 0));
     const empty = regionsOf(G, fid).filter(r => !r.garrison)
       .sort((a, b) => (b.id === f.capital ? 99 : borderScore(G, b)) - (a.id === f.capital ? 99 : borderScore(G, a)));
     bench.forEach(r => { const t = empty.shift(); if (t) t.garrison = r.id; });
 
-    // постройки
     const mine = regionsOf(G, fid);
     if (f.gold >= 150) {
       const free = mine.filter(r => !r.building);
@@ -442,7 +412,6 @@
       }
     }
 
-    // атаки: сначала резерв, затем гарнизоны (из столицы не ходят — её защищает командир)
     let attacks = 0;
     const ready = f.fighters.filter(r => !r.acted && r.wounded === 0 && locationOf(G, fid, r.id) !== f.capital)
       .sort((a, b) => ((locationOf(G, fid, a.id) < 0) ? 0 : 1) - ((locationOf(G, fid, b.id) < 0) ? 0 : 1) || rng.random() - 0.5);
@@ -473,7 +442,6 @@
       }
     }
 
-    // покупка ничейного региона на излишки
     if (f.gold >= 180) {
       const options = [];
       regionsOf(G, fid).forEach(r => neighbors(r.id).forEach(n => { if (G.regions[n].owner === null) options.push(n); }));
@@ -488,7 +456,6 @@
     return neighbors(r.id).filter(n => G.regions[n].owner !== r.owner).length;
   }
 
-  // ── Конец хода ───────────────────────────────────────────────
   function status(G) {
     const mine = regionsOf(G, PLAYER).length;
     return { regions: mine, target: WIN_REGIONS, turn: G.turn, maxTurns: MAX_TURNS, gold: player(G).gold,
@@ -509,7 +476,6 @@
     return G.over;
   }
 
-  /** Завершает ход игрока: ходят ИИ, затем новый ход игрока. Возвращает отчёт. */
   function endTurn(G) {
     if (G.over) return { events: [], income: null };
     const rng = E.createRng((G.seed + G.turn * 7919) >>> 0);

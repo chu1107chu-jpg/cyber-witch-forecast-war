@@ -1,4 +1,3 @@
-// Тесты кампании «Political Arena».  Запуск:  node --test tests/
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
@@ -14,7 +13,6 @@ const P = C.PLAYER;
 
 const fresh = (seed = 1, leader = F[0].id, diff = 'normal') => C.newCampaign(leader, seed, diff);
 
-/** Инварианты состояния — проверяются после каждого хода в симуляциях. */
 function checkInvariants(G, where = '') {
   const seen = new Set();
   G.regions.forEach(r => {
@@ -102,7 +100,6 @@ test('экономика: доход по местности и рынкам, с
   assert.equal(G.factions.p.gold, 500 - C.priceOf(merc));
   assert.equal(C.upkeep(G, P), C.upkeepOf(merc));
   assert.equal(C.netIncome(G, P), C.income(G, P) - C.upkeepOf(merc));
-  // уровень сложности меняет только доход ИИ
   const H = fresh(3, F[0].id, 'hard'), Ez = fresh(3, F[0].id, 'easy');
   assert.equal(C.income(H, P), C.income(Ez, P));
   assert.ok(C.income(H, 'a') > C.income(Ez, 'a'));
@@ -132,10 +129,10 @@ test('резерв атакует приграничный регион, гар�
   const near = C.neighbors(cap)[0];
   const far = G.regions.find(r => !C.neighbors(cap).includes(r.id) && r.id !== cap && r.owner === null &&
     !C.neighbors(r.id).some(n => G.regions[n].owner === P));
-  assert.equal(C.attackCheck(G, P, merc.id, near), '');                   // резерв → сосед столицы
-  assert.notEqual(C.attackCheck(G, P, merc.id, far.id), '');              // далёкий регион недоступен
-  assert.equal(C.attackCheck(G, P, G.factions.p.leaderId, near), '');     // командир в столице: соседи — можно
-  assert.notEqual(C.attackCheck(G, P, G.factions.p.leaderId, cap), '');   // свой регион — нельзя
+  assert.equal(C.attackCheck(G, P, merc.id, near), '');
+  assert.notEqual(C.attackCheck(G, P, merc.id, far.id), '');
+  assert.equal(C.attackCheck(G, P, G.factions.p.leaderId, near), '');
+  assert.notEqual(C.attackCheck(G, P, G.factions.p.leaderId, cap), '');
   const ref = C.refOf(G, P, merc.id);
   ref.acted = true; assert.match(C.attackCheck(G, P, merc.id, near), /действовал/);
   ref.acted = false; ref.wounded = 1; assert.match(C.attackCheck(G, P, merc.id, near), /ранен/);
@@ -171,7 +168,7 @@ test('поражение: боец ранен и остаётся на мест�
 test('пустой чужой регион берётся без боя', () => {
   const G = fresh(15);
   const r = G.regions[C.neighbors(G.factions.p.capital)[0]];
-  r.owner = 'a'; r.garrison = null;               // чужой, без гарнизона
+  r.owner = 'a'; r.garrison = null;
   const pb = C.prepareBattle(G, P, G.factions.p.leaderId, r.id);
   assert.ok(pb.undefended);
   const rep = C.autoBattle(G, P, G.factions.p.leaderId, r.id, E.createRng(1));
@@ -288,7 +285,6 @@ test('начало хода: доход, лечение (база лечит с�
   assert.ok(!lead.acted && !merc.acted);
   assert.equal(f.gold, g0 + C.income(G, P) - C.upkeep(G, P));
 
-  // банкротство: много наёмников, доход мал, денег нет
   const H = fresh(23);
   const hf = H.factions.p; hf.gold = 3000;
   for (let i = 0; i < 6; i++) C.recruit(H, P, C.availableMercs(H).slice(-1)[0].id);
@@ -327,7 +323,7 @@ test('симуляция: 24 партии — инварианты держат�
     const G = fresh(500 + g, F[(g * 5) % F.length].id, ['easy', 'normal', 'hard'][g % 3]);
     const rng = E.createRng(900 + g);
     for (let t = 0; t < 90 && !G.over; t++) {
-      if (g % 2) C.aiAct(G, P, rng, [], { skill: g % 4 === 1 });    // половина партий — бот-игрок, остальные — пассивный
+      if (g % 2) C.aiAct(G, P, rng, [], { skill: g % 4 === 1 });
       checkInvariants(G, `партия ${g}, ход ${G.turn}, до endTurn`);
       C.checkEnd(G);
       if (G.over) break;

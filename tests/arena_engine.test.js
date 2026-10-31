@@ -1,4 +1,3 @@
-// Тесты движка и кошелька «Political Arena».  Запуск:  node --test tests/
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
@@ -136,15 +135,12 @@ test('кошелёк: ставка, победа, серия, колесо, бо
   assert.equal(st.placeBet(1000).ok, false); assert.equal(st.placeBet(-5).ok, false);
   const w = st.settle({ fighterA: 'a', fighterB: 'b', userSide: 'a', winnerId: 'a', userWon: true, bet: 10, mult: 2 });
   assert.equal(w.payout, 20); assert.equal(w.balance, 110); assert.equal(st.get().pendingSpin, 20);
-  const sp = st.spin(() => 0.0);                       // первый сектор ×0.5
+  const sp = st.spin(() => 0.0);
   assert.equal(sp.mult, 0.5); assert.equal(sp.payout, 10); assert.equal(st.get().balance, 100);
   assert.equal(st.spin().ok, false, 'колесо только один раз');
-  // серия побед даёт множитель
   st.placeBet(10); const w2 = st.settle({ fighterA: 'a', fighterB: 'b', userSide: 'a', winnerId: 'a', userWon: true, bet: 10, mult: 2 });
   assert.equal(w2.streakMult, 1.2); assert.equal(w2.payout, 24);
-  // бонус раз в день
   assert.equal(st.claimDaily().ok, true); assert.equal(st.claimDaily().ok, false);
-  // бесплатные бои: 3 в день
   for (let i = 0; i < 3; i++) assert.equal(st.placeBet(0).ok, true);
   assert.equal(st.placeBet(0).ok, false);
 });

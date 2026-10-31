@@ -1,7 +1,3 @@
-/* ═══════════════════════════════════════════════════════════════
-   POLITICAL ARENA — интерфейс. Вся логика (бой, кошелёк) — в браузере:
-   engine.js (бой), store.js (кошелёк/прогресс), fighters.js (данные).
-   ═══════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
 
@@ -10,22 +6,20 @@
   const FX = window.ArenaFX;
   const FIGHTERS = window.ARENA_FIGHTERS || [];
   const BY_ID = Object.fromEntries(FIGHTERS.map(f => [f.id, f]));
-  const BASE = window.ARENA_BASE || '';           // в iframe Streamlit подставляется абсолютный путь к картинкам
+  const BASE = window.ARENA_BASE || '';
 
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => Array.from(document.querySelectorAll(s));
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-  const snd = (name) => { try { if (typeof sfx !== 'undefined' && sfx[name]) sfx[name](); } catch (e) { /* звук не критичен */ } };
+  const snd = (name) => { try { if (typeof sfx !== 'undefined' && sfx[name]) sfx[name](); } catch (e) { } };
   const shortName = (n) => n.split(' ').slice(-1)[0];
-  // картинки: встроенные (data:) если страница собрана для Streamlit, иначе файлы рядом
   const avatarUrl = (f) => (f.avatar && f.avatar.startsWith('data:')) ? f.avatar : (window.ARENA_IMG && window.ARENA_IMG[f.id]) || BASE + f.avatar;
 
   const TYPE_ICON = { light: '⚡', heavy: '🔨', special: '✨', ultimate: '💀' };
   const TYPE_NAME = { light: 'быстрый', heavy: 'тяжёлый', special: 'спец', ultimate: 'УЛЬТА' };
 
-  // ── Состояние ────────────────────────────────────────────────
   let selectedA = null, selectedB = null;
-  let betSide = null;            // 'a' | 'b' — за кого играем
+  let betSide = null;
   let fight = null, busy = false, ctx = null;
   let currentBet = 0, currentMult = 0, currentAmountUI = 10;
   let query = '', typeFilter = 'all';
@@ -41,7 +35,6 @@
     window.scrollTo(0, 0);
   }
 
-  // ── Уведомления (вместо alert: в iframe модальные окна могут быть запрещены) ──
   function toast(msg) {
     const t = document.createElement('div');
     t.className = 'toast'; t.textContent = msg;
@@ -50,7 +43,6 @@
     setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 2800);
   }
 
-  // ── Кошелёк в шапке ─────────────────────────────────────────
   function refreshWallet() {
     const st = S.get();
     $('#balance').textContent = st.balance;
@@ -63,7 +55,6 @@
     $('#btnDaily').classList.toggle('has-reward', S.dailyAvailable());
   }
 
-  // ── Сетка бойцов ────────────────────────────────────────────
   function statRow(label, val, max, cls) {
     const w = Math.max(4, Math.min(100, Math.round(val / max * 100)));
     return `<div class="fc-stat-row"><span class="fc-stat-label">${label}</span><div class="fc-stat-bar"><div class="fc-stat-fill ${cls}" style="width:${w}%"></div></div><span class="fc-stat-val">${val}</span></div>`;
@@ -94,13 +85,13 @@
     if (!img) return;
     img.addEventListener('error', () => {
       const box = img.parentElement;
-      if (box && box.classList.contains('fc-portrait')) {          // карточка: эмодзи на цветном фоне
+      if (box && box.classList.contains('fc-portrait')) {
         img.style.display = 'none';
         if (!box.querySelector('.fc-emoji-fallback')) {
           box.style.background = f.gradient || '#222';
           box.insertAdjacentHTML('beforeend', `<div class="fc-emoji-fallback">${f.emoji || '?'}</div>`);
         }
-      } else {                                                      // слоты, ставка, бой: круглый значок
+      } else {
         const sp = document.createElement('span');
         sp.className = 'avatar-emoji'; sp.textContent = f.emoji || '?';
         img.replaceWith(sp);
@@ -146,14 +137,13 @@
     });
   }
 
-  // ── Выбор бойцов ────────────────────────────────────────────
   function selectFighter(f) {
     snd('select');
     if (selectedA && selectedA.id === f.id) { selectedA = null; updateSlot('slotA', null); }
     else if (selectedB && selectedB.id === f.id) { selectedB = null; updateSlot('slotB', null); }
     else if (!selectedA) { selectedA = f; updateSlot('slotA', f); }
     else if (!selectedB) { selectedB = f; updateSlot('slotB', f); }
-    else { selectedB = f; updateSlot('slotB', f); }       // оба заняты — заменяем второго
+    else { selectedB = f; updateSlot('slotB', f); }
     renderFighters();
     $('#btnTobet').disabled = !(selectedA && selectedB);
   }
@@ -175,7 +165,6 @@
     });
   }
 
-  // ── Экран ставки ────────────────────────────────────────────
   function populateBetCard(side, f, p) {
     const U = side.toUpperCase();
     $(`#betEmoji${U}`).innerHTML = `<img class="bet-avatar" src="${avatarUrl(f)}" alt="">`;
@@ -195,7 +184,7 @@
     $('#matchupFill').style.width = `${Math.round(pA * 100)}%`;
     $('#matchupText').textContent = `${shortName(selectedA.name)} ${Math.round(pA * 100)}%  —  ${Math.round((1 - pA) * 100)}% ${shortName(selectedB.name)}`;
     $('#betAmount').value = Math.min(currentAmountUI, S.get().balance);
-    chooseSide('a', true);                       // по умолчанию играем за первого — можно сменить нажатием на карточку
+    chooseSide('a', true);
     showScreen('bet');
   }
 
@@ -243,7 +232,6 @@
     updateBetInfo();
   }
 
-  // ── Бой ─────────────────────────────────────────────────────
   const hooks = {
     ult: () => snd('combo'),
     swing: () => snd('click'),
@@ -410,7 +398,6 @@
     });
   }
 
-  // ── Результат ───────────────────────────────────────────────
   function finishFight(result) {
     if (ctx.mode === 'camp') {
       const won = result.user_won;
@@ -463,7 +450,6 @@
     if (settle.payout > 0) setTimeout(() => snd('coin'), 400);
   }
 
-  // ── Колесо удачи ────────────────────────────────────────────
   const WHEEL_COLORS = ['#e63946', '#6b7280', '#00b4d8', '#06d6a0', '#b44dff', '#f5a623'];
   let wheelBuilt = false, tickTimer = null;
 
@@ -519,7 +505,6 @@
     }, 4200);
   }
 
-  // ── Модальные окна ──────────────────────────────────────────
   function openModal(id) { $(id).style.display = 'flex'; }
   function closeModal(id) { $(id).style.display = 'none'; }
 
@@ -561,7 +546,7 @@
 
   function resetProgress() {
     const rb = $('#btnResetProgress');
-    if (rb.dataset.armed !== '1') {      // двойное нажатие вместо confirm()
+    if (rb.dataset.armed !== '1') {
       rb.dataset.armed = '1'; rb.textContent = 'Точно сбросить? Нажми ещё раз';
       setTimeout(() => { rb.dataset.armed = ''; rb.textContent = 'Сбросить прогресс'; }, 4000);
       return;
@@ -569,7 +554,6 @@
     S.reset(); refreshWallet(); closeModal('#modalProfile'); toast('Прогресс сброшен');
   }
 
-  // ── События ─────────────────────────────────────────────────
   function bindEvents() {
     $('#btnMenu').addEventListener('click', () => { snd('back'); showScreen('menu'); if (window.ArenaCamp) window.ArenaCamp.refreshMenu(); });
     $('#menuArena').addEventListener('click', () => { snd('click'); showScreen('select'); });
@@ -636,7 +620,6 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 
-  // для автотестов
   window.__arena = { get fight() { return fight; }, state: () => ({ selectedA, selectedB, betSide, busy }) };
   window.ArenaApp = {
     E, S, BY_ID, FIGHTERS, $, $$, sleep, snd, toast, avatarUrl, attachImgFallback, cardHTML, showScreen, runFight, playReplay,

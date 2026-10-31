@@ -1,4 +1,3 @@
-/* Данные бойцов (геймплейные поля). Сгенерировано из прежнего game/fighters.py */
 window.ARENA_FIGHTERS = [
  {
   "id": "trump",

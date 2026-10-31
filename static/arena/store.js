@@ -1,7 +1,3 @@
-/* ═══════════════════════════════════════════════════════════════
-   POLITICAL ARENA — кошелёк и прогресс игрока (хранится в браузере)
-   Без сервера: localStorage (если недоступен — только на время сессии).
-   ═══════════════════════════════════════════════════════════════ */
 (function (root) {
   'use strict';
   const E = root.ArenaEngine || (typeof require !== 'undefined' ? require('./engine.js') : null);
@@ -19,7 +15,7 @@
       freeDate: today(), freeUsed: 0,
       dailyDate: '', dailyStreak: 0,
       history: [],
-      pendingSpin: 0,          // выплата, на которую можно крутить колесо (0 — нельзя)
+      pendingSpin: 0,
     };
   }
 
@@ -29,13 +25,13 @@
       try {
         const raw = storage && storage.getItem(KEY);
         if (raw) { const s = JSON.parse(raw); if (s && s.v === 1) return Object.assign(fresh(), s); }
-      } catch (e) { /* повреждённые данные / нет доступа — начинаем заново */ }
+      } catch (e) { }
       return fresh();
     }
     let s = load();
     function save() {
       mem = s;
-      try { storage && storage.setItem(KEY, JSON.stringify(s)); } catch (e) { /* приватный режим */ }
+      try { storage && storage.setItem(KEY, JSON.stringify(s)); } catch (e) { }
     }
     function rollDay() {
       if (s.freeDate !== today()) { s.freeDate = today(); s.freeUsed = 0; }
@@ -58,7 +54,6 @@
         return { ok: true, amount, day_streak: dayStreak, balance: s.balance };
       },
 
-      /** Списывает ставку (или бесплатный бой). Возвращает {ok} или {ok:false,error}. */
       placeBet(amount) {
         rollDay();
         amount = Math.floor(Number(amount) || 0);
@@ -76,7 +71,6 @@
         return { ok: true, amount };
       },
 
-      /** Итог боя: считает выплату, серию, историю. */
       settle({ fighterA, fighterB, userSide, winnerId, userWon, bet, mult }) {
         let payout = 0, bailout = false;
         if (userWon) {
@@ -88,7 +82,6 @@
         } else {
           s.streak = 0; s.losses += 1; s.pendingSpin = 0;
         }
-        // страховка от тупика: пусто на счёте и бесплатных боёв нет
         if (s.balance < E.ECON.MIN_BET && api.freeLeft() === 0) { s.balance += E.ECON.BAILOUT; bailout = true; }
         s.history.unshift({ t: Date.now(), a: fighterA, b: fighterB, user: userSide, winner: winnerId, bet, payout, won: !!userWon });
         s.history = s.history.slice(0, 20);
@@ -96,7 +89,6 @@
         return { payout, balance: s.balance, streak: s.streak, streakMult: userWon && bet > 0 ? E.ECON.streakMult(s.streak) : 1, bailout };
       },
 
-      /** Колесо удачи: умножает выигрыш. Один раз после победы со ставкой. */
       spin(rng) {
         const base = s.pendingSpin;
         if (!base) return { ok: false, reason: 'no_spin' };

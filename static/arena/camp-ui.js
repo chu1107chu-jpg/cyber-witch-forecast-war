@@ -20,7 +20,7 @@
   function ls() { try { return window.localStorage; } catch (e) { return null; } }
   function save() {
     const v = JSON.stringify(G);
-    try { const s = ls(); if (s) { s.setItem(KEY, v); return; } } catch (e) { /* хранилище недоступно */ }
+    try { const s = ls(); if (s) { s.setItem(KEY, v); return; } } catch (e) { }
     mem[KEY] = v;
   }
   function load() {
@@ -30,7 +30,7 @@
       return g && g.v === 2 ? g : null;
     } catch (e) { return null; }
   }
-  function wipe() { try { const s = ls(); if (s) s.removeItem(KEY); } catch (e) { /* нет доступа */ } delete mem[KEY]; }
+  function wipe() { try { const s = ls(); if (s) s.removeItem(KEY); } catch (e) { } delete mem[KEY]; }
 
   const fd = (g, id) => C.fighterData(g, id);
   const cur = () => view || G;
@@ -63,7 +63,6 @@
 
   function lvlTag(ref) { return ref && ref.lvl ? `<span class="lvl">Ур.${ref.lvl}</span>` : ''; }
 
-  // ── Меню и старт ────────────────────────────────────────────
   function refreshMenu() {
     const g = load();
     const sub = $('#menuCampSub');
@@ -126,7 +125,6 @@
     openMap(true);
   }
 
-  // ── Карта ───────────────────────────────────────────────────
   function openMap(intro) {
     sel = null; view = null; busy = false; endWarned = false;
     A.showScreen('map');
@@ -218,7 +216,6 @@
     }).join('') + `<span class="lg" style="--oc:#4a5070"><i></i>Ничьи <b>${C.regionsOf(g, null).length}</b></span>`;
   }
 
-  // ── Панель региона ──────────────────────────────────────────
   function hint() {
     const f = pFaction();
     const bench = f.fighters.filter(r => C.locationOf(G, P, r.id) < 0 && !r.acted && !r.wounded);
@@ -365,7 +362,6 @@
     done(C.assign(G, P, id, r.id), 'Гарнизон назначен');
   }
 
-  // ── Бой ─────────────────────────────────────────────────────
   function fightCard(f, ref, tag, notes) {
     return `<div class="bp-card"><div class="bp-tag">${tag}</div><img src="${A.avatarUrl(f)}" alt=""><div class="bp-name">${f.name}</div>${statBar(f)}
       ${notes && notes.length ? `<div class="bp-notes">${notes.map(n => `<span>${n}</span>`).join('')}</div>` : ''}</div>`;
@@ -442,7 +438,6 @@
     setTimeout(() => el.remove(), 1500);
   }
 
-  // ── Ход соперников ──────────────────────────────────────────
   function arrow(from, to, color) {
     const svg = $('#campArrows'), map = $('#campMap');
     if (from == null || from < 0 || !tileEl(from) || !tileEl(to)) { svg.innerHTML = ''; return; }
@@ -573,7 +568,6 @@
     else { A.showScreen('menu'); refreshMenu(); }
   }
 
-  // ── Армия, найм, журнал, правила ────────────────────────────
   async function showArmy() {
     scrollMem = 0;
     for (;;) {
@@ -643,7 +637,6 @@
     }
   }
 
-  // ── События ─────────────────────────────────────────────────
   function bind() {
     $('#menuCamp').addEventListener('click', () => { snd('click'); openStart(); });
     $('#btnCampBegin').addEventListener('click', begin);

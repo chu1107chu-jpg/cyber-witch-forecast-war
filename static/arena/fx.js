@@ -19,7 +19,7 @@
       const a = el.animate(frames, o);
       return new Promise(res => {
         a.onfinish = () => {
-          if (commit && a.commitStyles) { try { a.commitStyles(); a.cancel(); } catch (e) { /* стиль остаётся от fill */ } }
+          if (commit && a.commitStyles) { try { a.commitStyles(); a.cancel(); } catch (e) { } }
           res(a);
         };
         a.oncancel = () => res(a);

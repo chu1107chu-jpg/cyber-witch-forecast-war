@@ -1,18 +1,3 @@
-/* ═══════════════════════════════════════════════════════════════
-   POLITICAL ARENA — боевой движок (работает целиком в браузере)
-
-   Что изменилось по сравнению с серверным движком на Python:
-   • Победитель определяется ХОДОМ БОЯ (нокаут или больше HP% после последнего
-     раунда). Раньше исход заранее решался хэшем 70/30 и не зависел от ударов.
-   • Эффекты применяются правильно: баффы — атакующему, дебаффы — сопернику.
-     Раньше бафф (atk_up/def_up/spd_up/hp_regen) подменял бойца-соперника
-     копией атакующего.
-   • Подсказка про ход соперника честная: ход AI выбирается заранее, подсказка
-     правдива с вероятностью 60% (иначе блеф). Раньше подсказка считалась
-     отдельным вызовом и не была связана с реальным ходом.
-   • Ульта — один раз за бой и не раньше 3-го раунда (для обеих сторон).
-   • Детерминируется seed'ом → можно писать воспроизводимые тесты.
-   ═══════════════════════════════════════════════════════════════ */
 (function (root) {
   'use strict';
 
@@ -22,17 +7,15 @@
     CRIT_BASE: 0.12,
     CRIT_LUCK: 0.015,
     CRIT_MULT: 1.6,
-    DMG_SCALE: 1.25,          // общий множитель урона (подобран симуляцией, см. tests/arena_engine.test.js)
+    DMG_SCALE: 1.25,
     HINT_TRUTH: 0.6,
     CONFUSE_ACC_PENALTY: 0.20,
     HEAL: 20,
   };
 
-  // «камень-ножницы-бумага»: key бьёт value
   const BEATS = { light: 'special', special: 'heavy', heavy: 'light' };
-  const COUNTERED_BY = { special: 'light', heavy: 'special', light: 'heavy' }; // кто бьёт ключ
+  const COUNTERED_BY = { special: 'light', heavy: 'special', light: 'heavy' };
 
-  // ── RNG (mulberry32) ─────────────────────────────────────────
   function createRng(seed) {
     let a = (seed >>> 0) || 1;
     function random() {
@@ -55,16 +38,15 @@
     };
   }
 
-  // ── Бойцы ────────────────────────────────────────────────────
   function makeCombatant(f) {
     return {
       id: f.id, name: f.name, moves: f.moves, luck: f.luck || 5,
       maxHp: f.hp, hp: f.hp,
       atk: f.atk, def: f.def, spd: f.spd,
-      confused: false,         // −20% к точности в следующем раунде
+      confused: false,
       ultUsed: false,
-      history: [],             // типы ударов по раундам (для комбо)
-      dealt: 0,                // суммарный нанесённый урон
+      history: [],
+      dealt: 0,
     };
   }
 
@@ -79,7 +61,6 @@
     });
   }
 
-  // ── AI ───────────────────────────────────────────────────────
   function aiPick(state, ai, foe) {
     const rng = state.rng;
     const avail = movesFor(ai, state.round).filter(m => m.available);
@@ -91,14 +72,12 @@
       else if (m.type === 'heavy') w = hpRatio < 0.4 ? 1.6 : 1.0;
       else if (m.type === 'special') w = state.round === 2 ? 1.8 : 1.2;
       else if (m.type === 'ultimate') w = hpRatio < 0.5 ? 4.0 : 2.5;
-      // читает привычки игрока: бьёт тем, что побеждает его прошлый ход
       if (lastFoe && m.type === COUNTERED_BY[lastFoe]) w *= 1.6;
       return w;
     });
     return rng.weighted(avail, weights);
   }
 
-  // ── Урон ─────────────────────────────────────────────────────
   function strike(att, def, move, foeType, comboCount, rng) {
     let acc = move.accuracy / 100;
     if (att.confused) acc -= C.CONFUSE_ACC_PENALTY;
@@ -145,8 +124,6 @@
     }
   }
 
-  // ── Бой ──────────────────────────────────────────────────────
-  /** fa — боец слева (A), fb — справа (B); userSide — 'a' | 'b' (кем управляет игрок). */
   function createFight(fa, fb, userSide, seed) {
     if (!fa || !fb) throw new Error('Боец не найден');
     if (fa.id === fb.id) throw new Error('Нельзя выставить бойца против самого себя');
@@ -257,14 +234,13 @@
       state.method = 'KO';
     } else if (B.hp <= 0) { state.winner = 'a'; state.method = 'KO'; }
     else if (A.hp <= 0) { state.winner = 'b'; state.method = 'KO'; }
-    else {                                              // по очкам: больше HP% → больше урона → монетка
+    else {
       const ra = A.hp / A.maxHp, rb = B.hp / B.maxHp;
       if (Math.abs(ra - rb) >= 0.01) state.winner = ra > rb ? 'a' : 'b';
       else if (A.dealt !== B.dealt) state.winner = A.dealt > B.dealt ? 'a' : 'b';
       else state.winner = state.rng.random() < 0.5 ? 'a' : 'b';
       state.method = 'DECISION';
     }
-    // победитель, добитый в двойном нокауте, остаётся на 1 HP — для красивого экрана
     const w = state.winner === 'a' ? A : B;
     if (w.hp <= 0) w.hp = 1;
   }
@@ -279,11 +255,9 @@
     };
   }
 
-  // ── Экономика ────────────────────────────────────────────────
   const ECON = {
     START_BALANCE: 100, MIN_BET: 1, MAX_BET: 100,
     FREE_FIGHTS_PER_DAY: 3, FREE_WIN_REWARD: 10,
-    // множитель выплаты за серию побед (считается по новой длине серии)
     streakMult: (n) => (n >= 5 ? 2.0 : n >= 3 ? 1.5 : n >= 2 ? 1.2 : 1.0),
     dailyBonus: (dayStreak) => Math.min(50 + (dayStreak - 1) * 10, 200),
     BAILOUT: 50,
@@ -293,16 +267,13 @@
     ],
   };
 
-  // ── Шансы и коэффициент ──────────────────────────────────────
   // Модель подобрана симуляцией 60 000 боёв (см. tests/arena_engine.test.js):
-  // шанс победы ≈ логистика от относительной разницы «силы» бойцов.
   const power = (f) => f.hp * 0.3 + f.atk * 2.5 + f.def * 1.5 + f.spd * 1.2 + (f.luck || 5) * 0.8;
   const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
   function winProb(f, foe) {
     const pf = power(f), po = power(foe);
     return clamp(1 / (1 + Math.exp(-12.3 * (pf - po) / (pf + po))), 0.12, 0.88);
   }
-  /** Коэффициент выплаты: честная цена минус 8% «маржи» — андердог платит больше. */
   const payoutMult = (p) => Math.round(clamp(0.92 / p, 1.1, 4.0) * 100) / 100;
 
   const api = { C, ECON, power, winProb, payoutMult, BEATS, createRng, createFight, getUserMoves, playRound, aiPick, movesFor, resultOf };

@@ -86,7 +86,8 @@ MIT
 считаются в браузере и хранятся в `localStorage`. В приложении — раздел «Игра»
 (`app_pages/_game.py`), отдельно — `/app/static/arena/index.html`.
 
-- Движок: `static/arena/engine.js`, кошелёк: `store.js`, данные бойцов: `fighters.js`.
-- Тесты: `node --test tests/arena_engine.test.js`.
+- Режимы: «Кампания» (карта 6×5, 4 фракции, найм, тренировка, форты/рынки/базы, ходы ИИ) и «Арена» (бой со ставкой).
+- Движок боя: `engine.js`, логика кампании: `campaign.js`, интерфейс: `app.js`, `camp-ui.js`, анимации боя: `fx.js`, кошелёк: `store.js`, бойцы: `fighters.js`.
+- Тесты: `node --test tests/arena_engine.test.js tests/arena_campaign.test.js`.
 - Чтобы вынести игру на отдельный адрес (например Firebase Hosting) — задай `GAME_URL`
   в Streamlit secrets; папка `static/arena/` самодостаточна, это обычная статика.

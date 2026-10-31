@@ -1,7 +1,3 @@
-/* ═══════════════════════════════════════════════════════
-   POLITICAL ARENA — Procedural Sound Engine (Web Audio API)
-   No external files needed. All sounds generated in real-time.
-   ═══════════════════════════════════════════════════════ */
 
 class SoundEngine {
   constructor() {
@@ -12,7 +8,7 @@ class SoundEngine {
 
   init() {
     const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) { this.ctx = null; this.enabled = false; return; }   // нет Web Audio — играем без звука
+    if (!AC) { this.ctx = null; this.enabled = false; return; }
     try { this.ctx = new AC(); } catch (e) { this.ctx = null; this.enabled = false; }
   }
 
@@ -20,8 +16,6 @@ class SoundEngine {
     if (!this.ctx) this.init();
     if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
   }
-
-  // ── Primitives ──────────────────────────────────────
 
   tone(freq, dur, type = 'sine', vol) {
     if (!this.enabled) return;
@@ -77,9 +71,6 @@ class SoundEngine {
     src.start(t);
   }
 
-  // ── Game Sounds ─────────────────────────────────────
-
-  // UI
   click() { this.tone(1200, 0.04, 'square', 0.15); }
 
   hover() { this.tone(800, 0.02, 'sine', 0.05); }
@@ -96,7 +87,6 @@ class SoundEngine {
     setTimeout(() => this.tone(150, 0.2, 'square', 0.15), 100);
   }
 
-  // Fight
   fightStart() {
     this.sweep(100, 400, 0.3, 'sawtooth', 0.3);
     setTimeout(() => this.noise(0.2, 0.3), 200);
@@ -138,7 +128,6 @@ class SoundEngine {
     setTimeout(() => this.noise(0.1, 0.2), 80);
   }
 
-  // Results
   victory() {
     const notes = [523, 659, 784, 1047];
     notes.forEach((f, i) => {
@@ -152,7 +141,6 @@ class SoundEngine {
     setTimeout(() => this.tone(80, 0.8, 'sine', 0.12), 200);
   }
 
-  // Economy
   coin() {
     this.tone(1400, 0.08, 'square', 0.12);
     setTimeout(() => this.tone(1800, 0.12, 'square', 0.1), 60);
@@ -170,7 +158,6 @@ class SoundEngine {
     });
   }
 
-  // Spin Wheel
   spinTick() { this.tone(600 + Math.random() * 600, 0.03, 'triangle', 0.12); }
 
   spinWin() {
@@ -179,20 +166,16 @@ class SoundEngine {
     setTimeout(() => this.victory(), 300);
   }
 
-  // Round transition
   roundStart() {
     this.tone(400, 0.08, 'square', 0.2);
     setTimeout(() => this.tone(600, 0.1, 'square', 0.25), 80);
   }
 
-  // Countdown beep
   countdown() { this.tone(800, 0.06, 'sine', 0.15); }
   countdownGo() { this.tone(1200, 0.15, 'sine', 0.25); }
 }
 
-// Global singleton
 const sfx = new SoundEngine();
-// AudioEngine compatibility layer for fight3d.js
 const AudioEngine = {
   _s(fn) { try { sfx.ensure(); fn(); } catch(e) {} },
   uiClick()     { this._s(() => sfx.click()); },
