@@ -1062,3 +1062,12 @@ body::after {
 .history-empty { text-align: center; font-size: 12px; color: var(--text-muted); padding: var(--sp-2) 0; }
 
 .legal-note { text-align: center; font-size: 10px; color: var(--text-muted); padding: var(--sp-4) var(--sp-4) var(--sp-6); }
+
+/* кнопки экрана ставки: не вылезают за экран, «В бой» тянется */
+.bet-actions { flex-wrap: wrap; align-items: stretch; }
+.bet-actions .btn-secondary { flex: 0 0 auto; }
+.bet-actions .btn-fight { margin: 0; width: auto; flex: 1 1 240px; max-width: 400px; }
+.bet-fighter-card.selected-bet::after { content: '✓ ИГРАЮ ЗА НЕГО'; display: block; margin-top: 8px; font-size: 10px; font-weight: 800; letter-spacing: 1px; color: var(--neon-green); }
+.avatar-emoji { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; font-size: 32px; border-radius: 50%; background: rgba(255,255,255,0.08); border: 2px solid var(--border); }
+.bet-emoji .avatar-emoji { width: 80px; height: 80px; font-size: 44px; }
+.slot-avatar { object-fit: cover; }

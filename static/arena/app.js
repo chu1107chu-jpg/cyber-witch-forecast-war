@@ -16,7 +16,8 @@
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   const snd = (name) => { try { if (typeof sfx !== 'undefined' && sfx[name]) sfx[name](); } catch (e) { /* звук не критичен */ } };
   const shortName = (n) => n.split(' ').slice(-1)[0];
-  const avatarUrl = (f) => BASE + f.avatar;
+  // картинки: встроенные (data:) если страница собрана для Streamlit, иначе файлы рядом
+const avatarUrl = (f) => (window.ARENA_IMG && window.ARENA_IMG[f.id]) || BASE + f.avatar;
 
   const TYPE_ICON = { light: '⚡', heavy: '🔨', special: '✨', ultimate: '💀' };
   const TYPE_NAME = { light: 'быстрый', heavy: 'тяжёлый', special: 'спец', ultimate: 'УЛЬТА' };
@@ -87,11 +88,17 @@
   function attachImgFallback(img, f) {
     if (!img) return;
     img.addEventListener('error', () => {
-      img.style.display = 'none';
       const box = img.parentElement;
-      if (box && !box.querySelector('.fc-emoji-fallback')) {
-        box.style.background = f.gradient || '#222';
-        box.insertAdjacentHTML('beforeend', `<div class="fc-emoji-fallback">${f.emoji || '?'}</div>`);
+      if (box && box.classList.contains('fc-portrait')) {          // карточка: эмодзи на цветном фоне
+        img.style.display = 'none';
+        if (!box.querySelector('.fc-emoji-fallback')) {
+          box.style.background = f.gradient || '#222';
+          box.insertAdjacentHTML('beforeend', `<div class="fc-emoji-fallback">${f.emoji || '?'}</div>`);
+        }
+      } else {                                                      // слоты, ставка, бой: круглый значок
+        const sp = document.createElement('span');
+        sp.className = 'avatar-emoji'; sp.textContent = f.emoji || '?';
+        img.replaceWith(sp);
       }
     }, { once: true });
   }
@@ -183,7 +190,7 @@
     $('#matchupFill').style.width = `${Math.round(pA * 100)}%`;
     $('#matchupText').textContent = `${shortName(selectedA.name)} ${Math.round(pA * 100)}%  —  ${Math.round((1 - pA) * 100)}% ${shortName(selectedB.name)}`;
     $('#betAmount').value = Math.min(currentAmountUI, S.get().balance);
-    updateBetInfo();
+    chooseSide('a', true);                       // по умолчанию играем за первого — можно сменить нажатием на карточку
     showScreen('bet');
   }
 
@@ -223,11 +230,11 @@
     $('#btnFight').disabled = !canFight;
   }
 
-  function chooseSide(side) {
+  function chooseSide(side, silent) {
     betSide = side;
     $$('.bet-fighter-card').forEach(c => c.classList.remove('selected-bet'));
     $(`#betCard${side.toUpperCase()}`).classList.add('selected-bet');
-    snd('select');
+    if (!silent) snd('select');
     updateBetInfo();
   }
 
