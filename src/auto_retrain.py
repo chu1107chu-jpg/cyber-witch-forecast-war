@@ -1,22 +1,3 @@
-"""
-auto_retrain.py
-===============
-Фоновое переобучение модели прямо внутри работающего Streamlit-приложения.
-
-Зачем: GitHub Actions у владельца заблокированы (проблема биллинга аккаунта), а
-Streamlit Cloud и так ходит в Yahoo Finance за котировками. Поэтому обучаем здесь.
-
-Как работает:
-  * модуль живёт в sys.modules, поэтому состояние (STATE) общее для всех сессий и
-    переживает перезапуски скрипта Streamlit — одновременно идёт максимум одно обучение;
-  * maybe_start() вызывается при каждом запуске скрипта, но реально стартует только если
-    свежая модель (live или из репозитория) старше MAX_AGE_DAYS и нет паузы после ошибки;
-  * результат пишется в LIVE_DIR (временная папка контейнера) атомарно; приложение
-    подхватывает его по mtime файла (см. live_version() / pick_artifacts_dir());
-  * после перезапуска контейнера (Streamlit Cloud усыпляет бесплатные приложения)
-    LIVE_DIR пропадает, берётся модель из репозитория, и при ближайшем визите,
-    если она старше недели, обучение запускается снова.
-"""
 from __future__ import annotations
 
 import json
@@ -34,8 +15,8 @@ RETRY_AFTER_ERROR_SEC = 6 * 3600     # не долбим Yahoo при каждо
 _LOCK = threading.Lock()
 STATE: dict = {
     "running": False,
-    "started_at": None,      # epoch
-    "finished_at": None,     # epoch
+    "started_at": None,
+    "finished_at": None,
     "last_error": None,
     "next_try_at": 0.0,
     "log": [],
@@ -62,7 +43,6 @@ def _trained_at(summary: dict | None) -> datetime | None:
 
 
 def live_version() -> float:
-    """mtime live-модели (0.0 если её нет) — ключ кэша для st.cache_resource."""
     try:
         return (LIVE_DIR / "train_summary.json").stat().st_mtime
     except OSError:
@@ -70,7 +50,6 @@ def live_version() -> float:
 
 
 def pick_artifacts_dir(committed_dir: Path) -> Path:
-    """Live-модель, если она есть, целая и свежее репозиторной; иначе репозиторная."""
     live = _read_summary(LIVE_DIR)
     if live and (LIVE_DIR / "models.pkl").exists() and (LIVE_DIR / "feature_cols.pkl").exists():
         t_live, t_repo = _trained_at(live), _trained_at(_read_summary(committed_dir))
@@ -109,7 +88,6 @@ def _worker() -> None:
 
 
 def read_history(committed_dir: Path) -> list:
-    """Журнал переобучений: из репозитория + из временной папки приложения (по дате)."""
     out = []
     for d in (committed_dir, LIVE_DIR):
         try:
@@ -124,7 +102,6 @@ def read_history(committed_dir: Path) -> list:
 
 
 def start(force: bool = False) -> bool:
-    """Запускает обучение в фоне. True — если запустили, False — уже идёт / пауза."""
     with _LOCK:
         if STATE["running"]:
             return False
@@ -136,7 +113,6 @@ def start(force: bool = False) -> bool:
 
 
 def maybe_start(committed_dir: Path, max_age_days: float = MAX_AGE_DAYS) -> bool:
-    """Запускает обучение, если модель устарела. Дёшево вызывать на каждом rerun."""
     STATE["committed_dir"] = committed_dir
     age = model_age_days(committed_dir)
     if age is not None and age < max_age_days:

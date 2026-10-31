@@ -1,4 +1,3 @@
-"""Загрузка новостей: NewsAPI, Alpha Vantage, RSS-ленты."""
 import argparse
 import logging
 import time
@@ -16,7 +15,6 @@ RAW_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def rate_limited(delay: float = 1.5):
-    """Декоратор-задержка."""
     def decorator(fn):
         def wrapper(*args, **kwargs):
             result = fn(*args, **kwargs)
@@ -112,7 +110,6 @@ def run(tickers: list[str], crypto: list[str] | None = None):
             except Exception as e:
                 logger.error(f"AlphaVantage error: {e}")
 
-    # RSS
     rows += fetch_rss_feeds(cfg["rss"]["feeds"])
 
     df = pd.DataFrame(rows)

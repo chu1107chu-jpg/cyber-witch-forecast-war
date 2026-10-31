@@ -1,4 +1,3 @@
-"""Basic smoke tests — run with: pytest tests/ -v"""
 import importlib
 import sys
 from pathlib import Path
@@ -26,7 +25,6 @@ def test_rng_determinism():
     engine = SpinEngine()
     r1 = engine.draw("user1", "nonce1")
     r2 = engine.draw("user1", "nonce1")
-    # Same seed => same result on same day
     assert r1["u"] == r2["u"]
 
 

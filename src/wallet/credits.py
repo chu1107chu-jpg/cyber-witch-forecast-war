@@ -1,9 +1,3 @@
-"""Внутренние кредиты (utility-tokens): debit / credit / balance.
-
-  Схема wallet_tx: id (auto), user_id, type ('credit'|'debit'),
-                   amount (всегда > 0), description, idempotency_key.
-  Схема wallets:   id (auto), user_id, balance (>= 0, CHECK на уровне БД).
-"""
 import logging
 import uuid
 
@@ -19,14 +13,12 @@ def get_balance(user_id: str) -> int:
     resp = _db().table("wallets").select("balance").eq("user_id", user_id).maybe_single().execute()
     if resp.data:
         return resp.data["balance"]
-    # Кошелёк не найден — создаём с нулевым балансом
     _db().table("wallets").insert({"user_id": user_id, "balance": 0}).execute()
     return 0
 
 
 def debit(user_id: str, amount: int, description: str,
           idempotency_key: str | None = None) -> dict:
-    """Списать amount кредитов. Атомарность через CHECK balance>=0 в БД."""
     if not idempotency_key:
         idempotency_key = str(uuid.uuid4())
 
@@ -51,11 +43,10 @@ def debit(user_id: str, amount: int, description: str,
         _db().table("wallets")
         .update({"balance": balance - amount})
         .eq("user_id", user_id)
-        .gte("balance", amount)   # guard: списываем только если хватает
+        .gte("balance", amount)
         .execute()
     )
     if not upd.data:
-        # Другой запрос уже списал — перечитываем
         return {"ok": False, "error": "Insufficient balance",
                 "new_balance": get_balance(user_id)}
 
@@ -63,7 +54,7 @@ def debit(user_id: str, amount: int, description: str,
     tx = _db().table("wallet_tx").insert({
         "user_id": user_id,
         "type": "debit",
-        "amount": amount,          # всегда положительное
+        "amount": amount,
         "description": description,
         "idempotency_key": idempotency_key,
     }).execute()
@@ -76,7 +67,6 @@ def debit(user_id: str, amount: int, description: str,
 
 def credit(user_id: str, amount: int, description: str,
            idempotency_key: str | None = None) -> dict:
-    """Начислить amount кредитов."""
     if not idempotency_key:
         idempotency_key = str(uuid.uuid4())
 

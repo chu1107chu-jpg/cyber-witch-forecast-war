@@ -1,4 +1,3 @@
-"""Загрузка котировок: yfinance (акции/ETF) и CoinGecko (крипта)."""
 import argparse
 import logging
 from pathlib import Path
@@ -12,7 +11,6 @@ RAW_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def fetch_yfinance(tickers: list[str], period: str = "10y") -> pd.DataFrame:
-    """Скачать OHLCV через yfinance."""
     frames = []
     for ticker in tickers:
         logger.info(f"[yfinance] {ticker}...")
@@ -24,7 +22,6 @@ def fetch_yfinance(tickers: list[str], period: str = "10y") -> pd.DataFrame:
 
 
 def load_candles(ticker: str, window: int = 120) -> list[dict]:
-    """Загрузить кэшированные свечи для API (или скачать на лету)."""
     path = RAW_DIR / f"candles_{ticker.replace('-','_')}.parquet"
     if path.exists():
         df = pd.read_parquet(path)
@@ -44,7 +41,6 @@ def run(tickers: list[str]):
         out = RAW_DIR / f"candles_{ticker.replace('-','_')}.parquet"
         sub.to_parquet(out, index=False)
         logger.info(f"  saved {out} ({len(sub)} rows)")
-    # unified CSV for pipeline
     out_csv = RAW_DIR / "task_1_candles.csv"
     df.to_csv(out_csv, index=False)
     logger.info(f"Combined CSV saved → {out_csv}")

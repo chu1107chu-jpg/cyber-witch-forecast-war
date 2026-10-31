@@ -1,4 +1,3 @@
-"""/api/v1/spin — Utility-token Spin (slot) механика (Provably Fair)"""
 from fastapi import APIRouter, Depends, Header
 from pydantic import BaseModel, Field
 import uuid, time
@@ -28,14 +27,12 @@ async def list_games():
 async def play(req: PlayReq, user=Depends(get_current_user)):
     from fastapi import HTTPException
     from src.wallet.credits import debit, credit, get_balance
-    from src.utils.rng import get_engine   # ← синглтон, не новый объект
+    from src.utils.rng import get_engine
 
     engine = get_engine(game_id=req.game_id)
 
-    # Проверка лимитов ставки
     engine.check_limits(user["sub"], req.stake)
 
-    # Списание ставки
     d = debit(
         user_id=user["sub"],
         amount=req.stake,
@@ -45,9 +42,8 @@ async def play(req: PlayReq, user=Depends(get_current_user)):
     if not d["ok"]:
         raise HTTPException(402, "Insufficient balance")
 
-    # Бросок колеса
     result = engine.draw(user_id=user["sub"], client_nonce=req.client_nonce)
-    max_payout_x = engine.cfg.get("limits", {}).get("max_payout_x", 10)  # дефолт 10x
+    max_payout_x = engine.cfg.get("limits", {}).get("max_payout_x", 10)
     payout = min(int(req.stake * result["r"]), int(req.stake * max_payout_x))
 
     credit_tx_id = None
@@ -55,7 +51,6 @@ async def play(req: PlayReq, user=Depends(get_current_user)):
         cr = credit(user_id=user["sub"], amount=payout, description="spin_reward")
         credit_tx_id = cr.get("tx_id")
 
-    # Сохраняем в БД; id генерирует Postgres автоматически
     from src.utils.db import get_db
     ins = get_db().table("spins").insert({
         "user_id": user["sub"],
@@ -72,7 +67,6 @@ async def play(req: PlayReq, user=Depends(get_current_user)):
     }).execute()
     spin_id = ins.data[0]["id"] if ins.data else "unknown"
 
-    # Перечитываем актуальный баланс после всех транзакций
     bal_after = get_balance(user["sub"])
     return {
         "ok": True,

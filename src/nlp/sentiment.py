@@ -1,4 +1,3 @@
-"""Sentiment scoring — FinBERT (en) / RuBERT-tiny (ru), CPU-friendly."""
 import logging
 from pathlib import Path
 
@@ -22,7 +21,7 @@ def _get_pipeline(lang: str = "en"):
     pipe = hf_pipeline(
         "text-classification",
         model=model_name,
-        device=-1,         # CPU
+        device=-1,
         truncation=True,
         max_length=128,
     )
@@ -31,7 +30,6 @@ def _get_pipeline(lang: str = "en"):
 
 
 def score_texts(texts: list[str], lang: str = "en") -> list[float]:
-    """Возвращает список float: +1 positive, -1 negative, 0 neutral."""
     pipe = _get_pipeline(lang)
     results = pipe(texts, batch_size=32)
     scores = []
@@ -48,11 +46,9 @@ def score_texts(texts: list[str], lang: str = "en") -> list[float]:
 
 
 def score_df(df: pd.DataFrame, text_col: str = "text") -> pd.DataFrame:
-    """Добавляет колонку sentiment_score к датафрейму."""
     df = df.copy()
     df["sentiment_score"] = 0.0
 
-    # split by language
     for lang in ("en", "ru"):
         mask = df.get("lang", pd.Series("en", index=df.index)) == lang
         sub = df[mask]

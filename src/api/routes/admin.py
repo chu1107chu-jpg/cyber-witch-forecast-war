@@ -1,4 +1,3 @@
-"""/api/v1/admin — game config, risk summary, RTP preview"""
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 from typing import Any, Dict
@@ -13,14 +12,12 @@ def require_admin(x_admin_secret: str = Header(...)):
 
 class DistributionSetReq(BaseModel):
     game_id: str
-    distribution: Dict[str, Any]   # JACKPOT/BIG/… → {p, r}
+    distribution: Dict[str, Any]
 
 
 @router.post("/game/distribution/set")
 async def set_distribution(req: DistributionSetReq, _=Header(..., alias="x-admin-secret")):
-    """Обновить вероятности/выплаты игры. Отклоняет если RTP > 0.45."""
     require_admin(_)
-    # validation
     rtp = sum(v["p"] * v["r"] for v in req.distribution.values())
     if rtp > 0.45:
         raise HTTPException(422, f"Theoretical RTP {rtp:.4f} > 0.45 — конфиг не сохранён")
@@ -30,7 +27,6 @@ async def set_distribution(req: DistributionSetReq, _=Header(..., alias="x-admin
 
 @router.get("/rtp/preview")
 async def rtp_preview(game_id: str, _=Header(..., alias="x-admin-secret")):
-    """Превью RTP по текущему конфигу + rolling-фактический RTP."""
     require_admin(_)
     from src.utils.config import load_games_config
     cfg = next((g for g in load_games_config() if g["game_id"] == game_id), None)
@@ -38,7 +34,6 @@ async def rtp_preview(game_id: str, _=Header(..., alias="x-admin-secret")):
         raise HTTPException(404, "game not found")
     payouts = cfg.get("payouts", {})
     theoretical_rtp = sum(v["p"] * v["r"] for v in payouts.values())
-    # rolling actual RTP from DB
     from src.utils.db import get_db
     resp = (
         get_db()
@@ -68,7 +63,6 @@ async def rtp_preview(game_id: str, _=Header(..., alias="x-admin-secret")):
 
 @router.get("/risk/summary")
 async def risk_summary(_=Header(..., alias="x-admin-secret")):
-    """Сводка по дневным лимитам, payouts, аномалиям."""
     require_admin(_)
     from src.utils.db import get_db
     from datetime import date

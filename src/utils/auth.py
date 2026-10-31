@@ -1,4 +1,3 @@
-"""JWT-верификация и admin-secret проверка."""
 import os
 from fastapi import HTTPException
 from jose import jwt, JWTError

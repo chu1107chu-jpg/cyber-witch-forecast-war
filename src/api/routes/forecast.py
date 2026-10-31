@@ -1,4 +1,3 @@
-"""/api/v1/forecast — train / predict / metrics"""
 from fastapi import APIRouter, BackgroundTasks, Query
 from pydantic import BaseModel
 from datetime import date
@@ -40,7 +39,6 @@ class MetricsResp(BaseModel):
 
 @router.post("/train", response_model=TrainResp)
 async def train(background_tasks: BackgroundTasks):
-    """Запуск обучения всех моделей (async background job)."""
     from datetime import datetime
     job_id = f"train_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     # TODO: background_tasks.add_task(run_training, job_id)
@@ -53,7 +51,6 @@ async def train(background_tasks: BackgroundTasks):
 
 @router.post("/predict", response_model=PredictResp)
 async def predict(req: PredictReq):
-    """Прогнозы r1 / R20 / p1 / p20 для списка тикеров."""
     from src.pipeline.predict import run_predict
     preds = run_predict(req.date.isoformat(), req.tickers)
     return PredictResp(preds=preds)
@@ -61,7 +58,6 @@ async def predict(req: PredictReq):
 
 @router.get("/metrics", response_model=MetricsResp)
 async def metrics(split: str = Query("val", pattern="^(val|test)$")):
-    """Метрики последней обученной модели."""
     from src.pipeline.evaluate import load_metrics
     m = load_metrics(split)
     return MetricsResp(**m)

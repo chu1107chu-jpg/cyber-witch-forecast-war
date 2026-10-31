@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="campaign.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#x2694;</text></svg>">
 </head>
 <body>
@@ -17,6 +18,7 @@
     <h1>POLITICAL<br><span class="accent">ARENA</span></h1>
   </div>
   <div class="header-right">
+    <button class="header-btn" id="btnMenu" title="Меню">&#x2630;</button>
     <button class="sound-toggle" id="soundToggle" title="Звук">&#x1F50A;</button>
     <button class="header-btn" id="btnDaily" title="Ежедневный бонус">&#x1F381;</button>
     <div class="wallet" id="wallet">
@@ -31,8 +33,85 @@
   </div>
 </header>
 
+<!-- 0. МЕНЮ -->
+<section class="screen active" id="screenMenu">
+  <div class="section-title">
+    <h2>ВЫБЕРИ РЕЖИМ</h2>
+    <p class="subtitle">Стратегия на карте или быстрый бой со ставкой</p>
+  </div>
+  <div class="menu-cards">
+    <button class="menu-card camp" id="menuCamp">
+      <div class="menu-ico">&#x1F5FA;&#xFE0F;</div>
+      <div class="menu-title">КАМПАНИЯ</div>
+      <div class="menu-desc">Захвати карту: нанимай бойцов, строй форты и базы, сражайся за регионы против трёх соперников. Партия на 30–60 ходов.</div>
+      <div class="menu-sub" id="menuCampSub">Новая кампания</div>
+    </button>
+    <button class="menu-card arena" id="menuArena">
+      <div class="menu-ico">&#x1F94A;</div>
+      <div class="menu-title">АРЕНА</div>
+      <div class="menu-desc">Один бой: выбери двоих, поставь монеты, играй за одного из них и крути колесо удачи.</div>
+      <div class="menu-sub">Быстрая игра</div>
+    </button>
+  </div>
+</section>
+
+<!-- 0.1 КАМПАНИЯ: СТАРТ -->
+<section class="screen" id="screenCampStart">
+  <div class="section-title">
+    <h2>КАМПАНИЯ</h2>
+    <p class="subtitle">Выбери командира и сложность</p>
+  </div>
+  <div class="camp-continue" id="campContinue" style="display:none;"></div>
+  <div class="howto">
+    <div class="howto-item"><b>&#x1F3AF; Цель</b><span>Удерживай 15 регионов из 30 или захвати столицы всех трёх соперников.</span></div>
+    <div class="howto-item"><b>&#x2694;&#xFE0F; Бои</b><span>Свои бои ведёшь сам (5 раундов), бои соперников идут автоматически.</span></div>
+    <div class="howto-item"><b>&#x1F465; Армия</b><span>Командир один, но можно нанимать бойцов, тренировать их и ставить в регионы.</span></div>
+    <div class="howto-item"><b>&#x1F3F0; Земля</b><span>Форты, рынки и базы. Падёт твоя столица &mdash; игра проиграна.</span></div>
+  </div>
+  <div class="diff-block">
+    <div class="type-chips" id="diffRow"></div>
+    <p class="diff-note" id="diffNote"></p>
+  </div>
+  <div class="fighter-filters">
+    <input type="search" id="campSearch" class="fighter-search" placeholder="Поиск командира…" autocomplete="off">
+  </div>
+  <div class="fighters-grid" id="campGrid"></div>
+  <div class="camp-start-bar">
+    <button class="btn-secondary" id="btnCampBack">&larr; МЕНЮ</button>
+    <div class="camp-picked" id="campPicked"><span>Выбери командира из списка</span></div>
+    <button class="btn-primary" id="btnCampBegin" disabled>НАЧАТЬ &#x2192;</button>
+  </div>
+</section>
+
+<!-- 0.2 КАМПАНИЯ: КАРТА -->
+<section class="screen" id="screenMap">
+  <div class="camp-hud" id="campHud">
+    <div class="hud-stat"><span>ХОД</span><b id="hudTurn">1/60</b></div>
+    <div class="hud-stat"><span>КАЗНА</span><b id="hudGold">100₲</b><small id="hudNet" class="pos"></small></div>
+    <div class="hud-stat"><span>РЕГИОНЫ</span><b id="hudRegions">1/15</b></div>
+    <div class="hud-stat"><span>АРМИЯ</span><b id="hudArmy">1/10</b></div>
+  </div>
+  <div class="camp-goal" id="campGoal"></div>
+  <div class="camp-toolbar">
+    <button class="btn-tool" id="btnArmy">&#x1F465; Армия</button>
+    <button class="btn-tool" id="btnMercs">&#x1F6D2; Найм</button>
+    <button class="btn-tool" id="btnLog">&#x1F4DC; Журнал</button>
+    <button class="btn-tool" id="btnHelp">&#x2753; Правила</button>
+  </div>
+  <div class="camp-map-wrap">
+    <div class="camp-map" id="campMap"></div>
+    <svg class="camp-arrows" id="campArrows"></svg>
+    <div class="camp-ticker" id="campTicker"></div>
+    <div class="camp-banner" id="campBanner"></div>
+    <div class="camp-wait" id="campWait"><span>Ходят соперники&hellip;</span></div>
+  </div>
+  <div class="camp-legend" id="campLegend"></div>
+  <div class="camp-panel" id="campPanel"></div>
+  <div class="camp-endturn"><button class="btn-primary btn-fight" id="btnEndTurn">ЗАВЕРШИТЬ ХОД &#x2192;</button></div>
+</section>
+
 <!-- 1. ВЫБОР БОЙЦОВ -->
-<section class="screen active" id="screenSelect">
+<section class="screen" id="screenSelect">
   <div class="section-title">
     <h2>ВЫБЕРИ БОЙЦОВ</h2>
     <p class="subtitle">Двое выходят на арену. Одним из них будешь управлять ты.</p>
@@ -124,20 +203,31 @@
 <!-- 3. БОЙ -->
 <section class="screen" id="screenFight">
   <div class="fight-arena" id="fightArena">
-    <div class="fight-header">
-      <div class="fight-fighter fight-left" id="fighterBoxA">
-        <div class="fight-emoji" id="fightEmojiA"></div>
-        <div class="fight-name" id="fightNameA"></div>
-        <div class="hp-bar"><div class="hp-fill" id="hpBarA"></div></div>
-        <div class="hp-text" id="hpTextA"></div>
+    <div class="fight-title" id="fightTitle"></div>
+    <div class="stage" id="stage" data-terrain="">
+      <div class="stage-bg"></div>
+      <div class="stage-floor"></div>
+      <div class="stage-top">
+        <div class="hud hud-left" id="fighterBoxA">
+          <div class="hud-name fight-name" id="fightNameA"></div>
+          <div class="hp-bar"><div class="hp-ghost" id="hpGhostA"></div><div class="hp-fill" id="hpBarA"></div></div>
+          <div class="hp-text" id="hpTextA"></div>
+          <div class="status-row" id="statusA"></div>
+        </div>
+        <div class="stage-round fight-round" id="fightRound">РАУНД 1</div>
+        <div class="hud hud-right" id="fighterBoxB">
+          <div class="hud-name fight-name" id="fightNameB"></div>
+          <div class="hp-bar"><div class="hp-ghost" id="hpGhostB"></div><div class="hp-fill" id="hpBarB"></div></div>
+          <div class="hp-text" id="hpTextB"></div>
+          <div class="status-row" id="statusB"></div>
+        </div>
       </div>
-      <div class="fight-round" id="fightRound">РАУНД 1</div>
-      <div class="fight-fighter fight-right" id="fighterBoxB">
-        <div class="fight-emoji" id="fightEmojiB"></div>
-        <div class="fight-name" id="fightNameB"></div>
-        <div class="hp-bar"><div class="hp-fill" id="hpBarB"></div></div>
-        <div class="hp-text" id="hpTextB"></div>
-      </div>
+      <div class="sprite sprite-a" id="spriteA"><div class="sprite-inner"><div class="sprite-img" id="fightEmojiA"></div></div><div class="sprite-shadow"></div></div>
+      <div class="sprite sprite-b" id="spriteB"><div class="sprite-inner"><div class="sprite-img" id="fightEmojiB"></div></div><div class="sprite-shadow"></div></div>
+      <div class="stage-fx"></div>
+      <div class="stage-banner"></div>
+      <button class="speed-btn" id="speedBtn">&#x23E9; 1&times;</button>
+      <div class="stage-end" id="stageEnd" style="display:none;"></div>
     </div>
 
     <div class="fight-log" id="fightLog"></div>
@@ -215,12 +305,19 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modalCamp" style="display:none;">
+  <div class="modal modal-camp" id="modalCampBody"></div>
+</div>
+
 <div class="fx-layer" id="fxLayer"></div>
 
 <script src="fighters.js"></script>
 <script src="engine.js"></script>
 <script src="store.js"></script>
 <script src="audio.js"></script>
+<script src="fx.js"></script>
 <script src="app.js"></script>
+<script src="campaign.js"></script>
+<script src="camp-ui.js"></script>
 </body>
 </html>

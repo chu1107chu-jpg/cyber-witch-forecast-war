@@ -1,16 +1,3 @@
-"""
-coin_flip.py
-============
-Подбрасыватель монеты для страницы "Монетка": орёл / решка / очень редко — ребро.
-
-Счётчики (просмотры страницы, число подбросов, распределение исходов)
-сохраняются в data/coin_stats.json — простой способ прикинуть трафик
-раздела без внешней аналитики. На Streamlit Community Cloud файл живёт,
-пока не будет передеплоя/перезапуска контейнера (та же оговорка, что и
-у data/ivpn_history.json в этом проекте).
-
-Файл: data/coin_stats.json
-"""
 from __future__ import annotations
 
 import json
@@ -51,11 +38,10 @@ def _save(stats: dict) -> None:
         with open(STATS_FILE, "w", encoding="utf-8") as f:
             json.dump(stats, f, ensure_ascii=False, indent=2)
     except Exception:
-        pass  # трафик — не критичная функция, страница не должна падать из-за диска
+        pass
 
 
 def record_page_view() -> dict:
-    """Вызывать один раз за сессию (см. флаг в session_state на странице)."""
     stats = _load()
     stats["page_views"] += 1
     _save(stats)
@@ -63,10 +49,6 @@ def record_page_view() -> dict:
 
 
 def flip_coin() -> tuple[str, dict]:
-    """Подбрасывает монету. Возвращает (результат, обновлённая статистика).
-
-    результат ∈ {"heads", "tails", "edge"}
-    """
     r = random.random()
     if r < EDGE_PROBABILITY:
         result = "edge"

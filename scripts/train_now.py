@@ -1,8 +1,3 @@
-"""
-Standalone training script.
-Downloads price data → builds features → trains sklearn ensemble.
-Run: python3 scripts/train_now.py
-"""
 import warnings, os, json, time
 warnings.filterwarnings("ignore")
 
@@ -19,15 +14,13 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.metrics import mean_absolute_error, roc_auc_score
 
-# ── CONFIG ────────────────────────────────────────────────────────────────────
 TICKERS = [
     "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA",
     "META", "TSLA", "BRK-B", "XOM", "JPM",
     "BTC-USD", "ETH-USD",
-    "GC=F",   # Gold
-    "^GSPC",  # S&P 500
-    "^IXIC",  # NASDAQ
-    # MOEX
+    "GC=F",
+    "^GSPC",
+    "^IXIC",
     "SBER.ME", "GAZP.ME", "LKOH.ME", "NVTK.ME", "ROSN.ME",
     "GMKN.ME", "YNDX.ME", "MGNT.ME", "MTSS.ME", "ALRS.ME",
     "TATN.ME", "PIKK.ME", "PLZL.ME", "RTKM.ME", "VTBR.ME",
@@ -38,7 +31,6 @@ RAWDIR  = Path(__file__).resolve().parent.parent / "data" / "raw"
 OUTDIR.mkdir(parents=True, exist_ok=True)
 RAWDIR.mkdir(parents=True, exist_ok=True)
 
-# ── HELPERS ───────────────────────────────────────────────────────────────────
 def rsi(series, n=14):
     delta = series.diff()
     gain  = delta.clip(lower=0).rolling(n).mean()
@@ -51,7 +43,7 @@ def macd(series, fast=12, slow=26, sig=9):
     ema_s = series.ewm(span=slow, adjust=False).mean()
     m     = ema_f - ema_s
     s     = m.ewm(span=sig, adjust=False).mean()
-    return m - s   # histogram
+    return m - s
 
 def atr(high, low, close, n=14):
     tr = pd.concat([
@@ -68,39 +60,32 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     v = df["Volume"]
 
     out = pd.DataFrame(index=df.index)
-    # returns
     out["ret1"]   = c.pct_change(1)
     out["ret3"]   = c.pct_change(3)
     out["ret5"]   = c.pct_change(5)
     out["ret10"]  = c.pct_change(10)
     out["ret20"]  = c.pct_change(20)
     out["log_ret1"]= np.log1p(out["ret1"])
-    # momentum
     out["rsi14"]  = rsi(c, 14)
     out["macd_h"] = macd(c)
     out["atr14"]  = atr(h, l, c, 14) / (c + 1e-9)
-    # volatility
     out["vol10"]  = out["log_ret1"].rolling(10).std()
     out["vol20"]  = out["log_ret1"].rolling(20).std()
     out["vol_ratio"] = out["vol10"] / (out["vol20"] + 1e-9)
-    # price position
     out["dist_hi52"] = c / c.rolling(252).max()
     out["dist_lo52"] = c / c.rolling(252).min()
     out["ma50_ratio"]= c / c.rolling(50).mean()
     out["ma200_ratio"]= c / c.rolling(200).mean()
-    # volume
     if v.sum() > 0:
         out["vol_rel"] = v / (v.rolling(20).mean() + 1e-9)
     else:
         out["vol_rel"] = 1.0
-    # TARGETS
-    out["target_r1"]    = c.shift(-1).pct_change(1).shift(1)   # 1-day fwd return
-    out["target_R20"]   = c.shift(-20).pct_change(20).shift(20) # 20-day fwd return
+    out["target_r1"]    = c.shift(-1).pct_change(1).shift(1)
+    out["target_R20"]   = c.shift(-20).pct_change(20).shift(20)
     out["target_p1_up"] = (out["target_r1"] > 0).astype(float)
     out["target_p20_up"]= (out["target_R20"] > 0).astype(float)
     return out.dropna()
 
-# ── STEP 1: DOWNLOAD DATA ─────────────────────────────────────────────────────
 print(f"\n{'='*60}")
 print(f"  STEP 1 — Downloading {len(TICKERS)} tickers × {PERIOD}")
 print(f"{'='*60}")
@@ -114,7 +99,6 @@ for ticker in TICKERS:
         if raw.empty or len(raw) < 300:
             print("⚠ too short, skip")
             continue
-        # flatten MultiIndex if present
         if isinstance(raw.columns, pd.MultiIndex):
             raw.columns = raw.columns.get_level_values(0)
         raw["ticker"] = ticker
@@ -127,7 +111,6 @@ for ticker in TICKERS:
 if not all_frames:
     raise RuntimeError("No data downloaded — check internet connection")
 
-# ── STEP 2: BUILD FEATURES ────────────────────────────────────────────────────
 print(f"\n{'='*60}")
 print(f"  STEP 2 — Building features")
 print(f"{'='*60}")
@@ -154,7 +137,6 @@ TARGET_COLS  = ["target_r1", "target_R20", "target_p1_up", "target_p20_up"]
 X = combined[FEATURE_COLS].astype(float)
 print(f"  Feature matrix: {X.shape}")
 
-# ── STEP 3: TRAIN MODELS ──────────────────────────────────────────────────────
 print(f"\n{'='*60}")
 print(f"  STEP 3 — Training models")
 print(f"{'='*60}")
@@ -214,7 +196,7 @@ for target in TARGET_COLS:
             metric_name = "mae"
 
         val_scores.append(score)
-        if fold == 4:   # keep last fold model
+        if fold == 4:
             final_model = model
 
     mean_score = float(np.mean(val_scores))
@@ -227,7 +209,6 @@ for target in TARGET_COLS:
 
     artifacts[target] = final_model
 
-# ── STEP 4: SAVE ARTIFACTS ────────────────────────────────────────────────────
 print(f"\n{'='*60}")
 print(f"  STEP 4 — Saving artifacts")
 print(f"{'='*60}")
@@ -250,7 +231,6 @@ print(f"  ✓ models.pkl         → {OUTDIR}/models.pkl")
 print(f"  ✓ feature_cols.pkl   → {OUTDIR}/feature_cols.pkl")
 print(f"  ✓ train_summary.json → {OUTDIR}/train_summary.json")
 
-# ── SUMMARY ───────────────────────────────────────────────────────────────────
 print(f"\n{'='*60}")
 print(f"  ✅ TRAINING COMPLETE  ({summary['elapsed_total']}s)")
 print(f"{'='*60}")

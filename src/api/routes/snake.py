@@ -1,4 +1,3 @@
-"""/api/v1/snake — Utility Snake «Лови бонусы» (Провабли-фэир)"""
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Optional
@@ -48,7 +47,6 @@ def _day_key() -> bytes:
     return hashlib.sha256(salt + date.today().isoformat().encode()).digest()
 
 
-# In-memory store (в проде — Supabase/Redis)
 ROUND_STORE: dict = {}
 
 
@@ -59,7 +57,7 @@ class StartReq(BaseModel):
 
 
 class PosEvent(BaseModel):
-    ts: int    # мс от начала раунда
+    ts: int
     x: float
 
 
@@ -141,7 +139,6 @@ async def finish_session(req: FinishReq, user=Depends(get_current_user)):
 
     base = _hmac_bytes(server_seed, b"spawns:" + req.client_nonce.encode())
 
-    # generate deterministic spawns
     spawns = []
     t = 0.0
     while t < dur_ms / 1000:
@@ -157,7 +154,6 @@ async def finish_session(req: FinishReq, user=Depends(get_current_user)):
         speed = max(60.0, speed_base + (u_sp - 0.5) * 2 * speed_jitter)
         spawns.append({"t0": t, "x": u_x * CANVAS_W, "kind": kind, "r": r, "v": speed})
 
-    # interpolate basket position
     positions = sorted(req.positions, key=lambda p: p.ts)
 
     def basket_x_at(ms: int) -> float:
@@ -191,7 +187,6 @@ async def finish_session(req: FinishReq, user=Depends(get_current_user)):
         from src.wallet.credits import credit
         credit(user_id=user["sub"], amount=payout_int, description="snake_reward")
 
-    # persist
     from src.utils.db import get_db
     get_db().table("snake_rounds").insert({
         "round_id": req.round_id,

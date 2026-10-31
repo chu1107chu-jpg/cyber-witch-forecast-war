@@ -1,4 +1,3 @@
-"""Страница: Кошелёк — баланс, история транзакций, пополнение (admin)."""
 import os
 import requests
 import pandas as pd
@@ -11,7 +10,6 @@ headers = {"Authorization": f"Bearer {token}"}
 st.title("💳 Кошелёк")
 st.caption("Внутренние утility-кредиты. Монетизация через TON/Solana — в дорожной карте.")
 
-# --- Баланс ---
 try:
     bal_data = requests.get(f"{API}/wallet/balance", headers=headers, timeout=5).json()
     balance  = bal_data.get("balance", 0)
@@ -25,7 +23,6 @@ col3.metric("Сеть", "Internal (TON ready)")
 
 st.divider()
 
-# --- История транзакций ---
 st.subheader("История транзакций")
 try:
     tx_resp = requests.get(f"{API}/wallet/transactions",
@@ -49,7 +46,6 @@ except Exception as e:
 
 st.divider()
 
-# --- Admin: пополнение ---
 with st.expander("🔐 Admin: начислить кредиты"):
     admin_secret = st.text_input("Admin secret", type="password", key="wallet_adm")
     user_id      = st.text_input("User ID (UUID)")

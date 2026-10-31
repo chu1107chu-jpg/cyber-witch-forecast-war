@@ -1,4 +1,3 @@
-"""/api/v1/nft — list / mint-internal / upload / web3 stubs"""
 from fastapi import APIRouter, Depends, Header, UploadFile, File, HTTPException
 from pydantic import BaseModel
 import uuid
@@ -24,7 +23,6 @@ async def nft_list(user=Depends(get_current_user)):
 
 @router.post("/mint-internal")
 async def mint_internal(req: MintInternalReq, user=Depends(get_current_user)):
-    """Купить NFT за кредиты (off-chain)."""
     from src.utils.db import get_db
     from src.wallet.credits import debit
 
@@ -54,7 +52,6 @@ async def upload_nft(
     file: UploadFile = File(...),
     x_admin_secret: str = Header(...),
 ):
-    """Загрузить медиа для NFT. Проходит YOLO/OpenCV модерацию."""
     from src.utils.auth import check_admin
     check_admin(x_admin_secret)
 
@@ -69,8 +66,6 @@ async def upload_nft(
     url = upload_bytes(key, content, content_type=file.content_type)
     return {"ok": True, "media_url": url, "moderation": moderation}
 
-
-# ── Web3 stubs ────────────────────────────────────────────────
 
 @router.post("/mint-ton")
 async def mint_ton(_user=Depends(get_current_user)):

@@ -1,8 +1,6 @@
-"""Solana адаптер: заглушка. Раскомментировать при WEB3_ENABLE=true."""
 
 
 def prepare_mint(meta: dict) -> dict:
-    """Создать payload для Solana-транзакции минтинга NFT."""
     return {
         "chain": "Solana",
         "recipient_wallet": meta.get("recipient_wallet", ""),

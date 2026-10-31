@@ -1,4 +1,3 @@
-"""sklearn baseline models: Ridge, ElasticNet, Logistic, RF, ExtraTrees."""
 import logging
 import pickle
 from pathlib import Path
@@ -14,7 +13,7 @@ logger = logging.getLogger(__name__)
 ARTIFACT_DIR = Path("data/artifacts/sklearn")
 ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
 
-FEATURE_COLS: list[str] = []  # будет заполнено в train()
+FEATURE_COLS: list[str] = []
 
 
 def _get_feature_cols(df: pd.DataFrame) -> list[str]:
@@ -32,7 +31,6 @@ def train(df: pd.DataFrame) -> dict:
     y_p1 = df["target_p1_up"].values
     y_p20 = df["target_p20_up"].values
 
-    # regression
     reg_models = [
         ("ridge", Ridge(alpha=1.0)),
         ("enet", ElasticNet(alpha=0.01, l1_ratio=0.5, max_iter=2000)),
@@ -45,7 +43,6 @@ def train(df: pd.DataFrame) -> dict:
     reg_R20 = StackingRegressor(
         estimators=reg_models[:2], final_estimator=Ridge(), passthrough=True, cv=3
     )
-    # classification
     clf_models = [
         ("lr", LogisticRegression(C=1.0, max_iter=500, random_state=42)),
         ("rf_c", RandomForestRegressor(n_estimators=100, max_depth=6, n_jobs=-1, random_state=42)),

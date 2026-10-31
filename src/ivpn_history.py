@@ -1,33 +1,3 @@
-"""
-ivpn_history.py
-===============
-Хранилище снапшотов ИВПН во времени.
-
-Каждый снапшот:
-  {
-    "ts":            "2026-03-08T10:00:00+00:00",   # ISO-8601 UTC
-    "source":        "news_update | manual | seed",
-    "ivpn":          0.82,
-    "p_escalation":  0.71,
-    "markov_state":  "🔴 Война",
-    "markov_idx":    3,
-    "factors":       { ... текущие значения всех факторов ... },
-    "factor_deltas": { "economic_pressure": +0.07, ... },
-    "events": [
-      {
-        "title":   "КСИР закрыл Ормузский пролив",
-        "url":     "https://...",
-        "source":  "ТАСС",
-        "published":"...",
-        "factor":  "economic_pressure",
-        "delta":   0.07
-      },
-      ...
-    ]
-  }
-
-Файл: data/ivpn_history.json
-"""
 from __future__ import annotations
 
 import json
@@ -40,11 +10,7 @@ HISTORY_FILE = Path(__file__).parent.parent / "data" / "ivpn_history.json"
 HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 
-# ──────────────────────────────────────────────
-#  I/O
-# ──────────────────────────────────────────────
 def load_history() -> list[dict]:
-    """Загружает всю историю, новейшие записи первые."""
     if not HISTORY_FILE.exists():
         return []
     try:
@@ -62,9 +28,6 @@ def _save_history(records: list[dict]) -> None:
         json.dump(records, f, ensure_ascii=False, indent=2)
 
 
-# ──────────────────────────────────────────────
-#  Формирование снапшота
-# ──────────────────────────────────────────────
 def make_snapshot(
     ivpn: float,
     p_escalation: float,
@@ -91,32 +54,19 @@ def make_snapshot(
 
 
 def append_snapshot(snap: dict) -> None:
-    """Добавляет снапшот в начало истории (новейшие — первые)."""
     records = load_history()
     records.insert(0, snap)
-    # Ограничиваем размер: 500 снапшотов
     _save_history(records[:500])
 
 
-# ──────────────────────────────────────────────
-#  Дедупликация: не сохраняем если ИВПН не изменился
-# ──────────────────────────────────────────────
 def should_save(new_ivpn: float, min_delta: float = 0.005) -> bool:
-    """Возвращает True если ИВПН изменился достаточно от последней записи."""
     records = load_history()
     if not records:
         return True
     return abs(new_ivpn - records[0]["ivpn"]) >= min_delta
 
 
-# ──────────────────────────────────────────────
-#  Вспомогательные функции для графика
-# ──────────────────────────────────────────────
 def build_chart_data(records: list[dict]) -> dict:
-    """
-    Преобразует список снапшотов в структуры для Plotly.
-    Возвращает dict с полями ts, ivpn, p_escalation, hover_text, marker_color.
-    """
     ts_list, ivpn_list, p_list, hover_list, colors = [], [], [], [], []
     markov_colors = {
         "🟢 Мир":           "#26c281",
@@ -126,12 +76,11 @@ def build_chart_data(records: list[dict]) -> dict:
         "🔵 Заморозка":     "#6c63ff",
     }
 
-    for rec in reversed(records):  # хронологический порядок для графика
+    for rec in reversed(records):
         ts_list.append(rec["ts"])
         ivpn_list.append(rec["ivpn"])
         p_list.append(rec["p_escalation"])
 
-        # ─── hover-текст ───────────────────────────────────
         lines = [
             f"<b>{rec['ts'][:16].replace('T',' ')} UTC</b>",
             f"Уровень напряжённости = <b>{rec['ivpn']:.3f}</b>  |  P(эскалации) = <b>{rec['p_escalation']:.1%}</b>",
@@ -147,7 +96,6 @@ def build_chart_data(records: list[dict]) -> dict:
         events = rec.get("events", [])
         if events:
             lines.append("─────────────────")
-            # Уникальные заголовки
             seen = set()
             for ev in events[:5]:
                 t = ev.get("title", "")

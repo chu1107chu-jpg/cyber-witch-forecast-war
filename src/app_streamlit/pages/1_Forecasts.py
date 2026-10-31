@@ -1,4 +1,3 @@
-"""Страница: Прогнозы — чарты + таблица метрик."""
 import os
 import requests
 import pandas as pd
@@ -16,7 +15,6 @@ tickers = requests.get(f"{API}/data/tickers", timeout=5).json().get("tickers", [
 ticker = st.selectbox("Тикер", tickers)
 horizon = st.radio("Горизонт", ["t+1", "t+20"], horizontal=True)
 
-# ── Котировки ────────────────────────────────────────────────
 try:
     qd = requests.get(f"{API}/data/quotes", params={"ticker": ticker, "window": 120},
                       timeout=10).json()
@@ -30,7 +28,6 @@ try:
 except Exception as e:
     st.error(f"Котировки: {e}")
 
-# ── Прогноз ──────────────────────────────────────────────────
 if st.button("Прогноз сейчас"):
     payload = {"date": str(date.today()), "tickers": [ticker]}
     resp = requests.post(f"{API}/forecast/predict", json=payload,
@@ -40,7 +37,6 @@ if st.button("Прогноз сейчас"):
         p = preds[0]
         st.dataframe(pd.DataFrame([p]))
 
-# ── Big News Analysis ─────────────────────────────────────────
 with st.expander("📌 Аналитика крупных новостей (5 лет)"):
     try:
         bna = requests.get(f"{API}/data/big-news-analysis", params={"ticker": ticker},
@@ -55,7 +51,6 @@ with st.expander("📌 Аналитика крупных новостей (5 л�
     except Exception as e:
         st.info(f"Недоступно: {e}")
 
-# ── Метрики ──────────────────────────────────────────────────
 with st.expander("Метрики модели"):
     split = st.selectbox("Сплит", ["val", "test"])
     try:

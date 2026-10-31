@@ -1,4 +1,3 @@
-"""/api/v1/wallet — balance / spend / charge"""
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -30,7 +29,6 @@ class TxResp(BaseModel):
 
 
 def get_current_user(authorization: str = Header(...)):
-    """Простой JWT-парсер → user_id. TODO: заменить на полноценный."""
     from src.utils.auth import verify_jwt
     return verify_jwt(authorization.removeprefix("Bearer "))
 

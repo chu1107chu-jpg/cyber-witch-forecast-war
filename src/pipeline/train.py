@@ -1,4 +1,3 @@
-"""Основной пайплайн обучения: sklearn + TF + Torch → artifacts."""
 import argparse
 import json
 import logging

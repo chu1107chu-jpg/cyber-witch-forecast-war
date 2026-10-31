@@ -1,4 +1,3 @@
-"""Страница: NFT — галерея, минт, загрузка (admin)."""
 import os
 import io
 import requests
@@ -12,7 +11,6 @@ ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "")
 st.title("🖼️ NFT Gallery")
 st.caption("Внутренние NFT-сертификаты. Минт стоит кредиты; хранение в Cloudflare R2.")
 
-# --- Галерея ---
 try:
     items = requests.get(f"{API}/nft/list", headers=headers, timeout=8).json().get("items", [])
 except Exception:
@@ -32,11 +30,10 @@ else:
 
 st.divider()
 
-# --- Минт ---
 st.subheader("Минт нового NFT")
 nft_name = st.text_input("Название", placeholder="Мой прогноз #1")
 nft_desc = st.text_area("Описание", placeholder="Был ли бычий рынок?..")
-nft_cost = 200  # кредитов
+nft_cost = 200
 
 if st.button(f"Минтнуть (−{nft_cost} cr)", type="primary"):
     if not nft_name.strip():
@@ -57,7 +54,6 @@ if st.button(f"Минтнуть (−{nft_cost} cr)", type="primary"):
 
 st.divider()
 
-# --- Admin: загрузка изображения ---
 with st.expander("🔐 Admin: загрузить изображение"):
     adm_secret = st.text_input("Admin secret", type="password")
     uploaded   = st.file_uploader("Изображение (jpeg/png/gif, макс 5 МБ)",

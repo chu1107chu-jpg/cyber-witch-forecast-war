@@ -1,4 +1,3 @@
-"""Страница: Spin — слот-машина с provably-fair RNG."""
 import os
 import time
 import uuid
@@ -23,7 +22,6 @@ BUCKET_ICONS = {
 st.title("🎰 Utility Spin")
 st.caption("Провably-fair слот на внутренние кредиты. RTP ≈ 43.5%.")
 
-# Получить список конфигов
 try:
     games_cfg = requests.get(f"{API}/spin/games", timeout=5).json().get("games", [])
     game_id = st.selectbox("Игра", [g["id"] for g in games_cfg]) if games_cfg else "utility_slot_v1"
@@ -72,7 +70,6 @@ if spin_btn:
     except Exception as e:
         st.error(f"Ошибка запроса: {e}")
 
-# История
 with st.expander("История спинов (последние 20)"):
     try:
         hist = requests.get(f"{API}/spin/history",

@@ -1,4 +1,3 @@
-"""Страница: Snake — лови предсказания, зарабатывай кредиты."""
 import os
 import json
 import uuid
@@ -15,7 +14,6 @@ st.caption("Управляй корзиной, лови золотые шары-
 
 stake = st.slider("Ставка за сессию (кредиты)", 10, 500, 50, step=10)
 
-# --- встроенный JS-клиент ---
 SNAKE_HTML = """
 <!DOCTYPE html>
 <html>

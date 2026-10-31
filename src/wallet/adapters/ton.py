@@ -1,8 +1,6 @@
-"""TON адаптер: заглушка. Раскомментировать при WEB3_ENABLE=true."""
 
 
 def prepare_mint(meta: dict) -> dict:
-    """Создать payload для TON-транзакции минтинга NFT."""
     return {
         "chain": "TON",
         "collection_address": meta.get("collection_address", ""),

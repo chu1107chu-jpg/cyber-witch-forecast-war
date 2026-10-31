@@ -1,12 +1,3 @@
-"""
-Переобучение модели акций (LightGBM) из командной строки / GitHub Actions.
-
-Вся логика — в src/stock_training.py (тот же код использует фоновое переобучение
-внутри приложения, см. src/auto_retrain.py). Артефакты пишутся в data/artifacts/lgbm/ —
-оттуда их читает app_local.py.
-
-    python scripts/train_lgbm.py
-"""
 import os
 import sys
 from pathlib import Path

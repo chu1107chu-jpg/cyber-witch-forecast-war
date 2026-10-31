@@ -1,23 +1,10 @@
 #!/usr/bin/env python
-"""CLI runner for ETL / feature / train pipeline steps.
-
-Usage:
-    python scripts/run_etl.py --step fetch_quotes
-    python scripts/run_etl.py --step fetch_news
-    python scripts/run_etl.py --step clean_news
-    python scripts/run_etl.py --step build_features
-    python scripts/run_etl.py --step big_news
-    python scripts/run_etl.py --step train --time-budget 3600
-    python scripts/run_etl.py --step evaluate
-    python scripts/run_etl.py --step all      # run everything
-"""
 
 import argparse
 import sys
 import time
 from pathlib import Path
 
-# Make sure project root is on the path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 

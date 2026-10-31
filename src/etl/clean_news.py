@@ -1,4 +1,3 @@
-"""Очистка, дедупликация и нормализация новостного датасета."""
 import logging
 from pathlib import Path
 
@@ -27,30 +26,24 @@ def _detect_lang(text: str) -> str:
 
 
 def clean(df: pd.DataFrame, allowed_langs: list[str] = ("en", "ru")) -> pd.DataFrame:
-    # normalize timestamps
     df["published_at"] = df["published_at"].apply(_parse_date)
     df = df.dropna(subset=["published_at"])
     df = df.sort_values("published_at")
 
-    # fill missing lang
     df["lang"] = df.apply(
         lambda r: r["lang"] if isinstance(r.get("lang"), str) and r["lang"] in allowed_langs
         else _detect_lang(str(r["title"])),
         axis=1,
     )
 
-    # keep only allowed langs
     df = df[df["lang"].isin(allowed_langs)]
 
-    # dedup by url
     df = df.drop_duplicates(subset=["url"])
 
-    # dedup by title similarity (simple hash)
     df["title_norm"] = df["title"].str.lower().str.strip()
     df = df.drop_duplicates(subset=["title_norm"])
     df = df.drop(columns=["title_norm"])
 
-    # text columns
     df["text"] = (df["title"].fillna("") + " " + df["description"].fillna("")).str.strip()
 
     return df.reset_index(drop=True)
@@ -62,7 +55,6 @@ def load_news(
     to_date: str | None = None,
     limit: int = 50,
 ) -> list[dict]:
-    """Загрузить очищенные новости для API."""
     path = PROCESSED_DIR / "task_1_news.csv"
     if not path.exists():
         logger.warning("Processed news not found, returning []")

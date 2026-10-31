@@ -1,9 +1,3 @@
-"""
-Предсказания — локальное демо-приложение.
-Запуск: streamlit run app_local.py
-Не требует Supabase / внешних API. Использует обученные модели из data/artifacts/lgbm/
-(с фолбэком на data/artifacts/sklearn/, если lgbm ещё не обучен).
-"""
 import json
 import os
 import sys
@@ -30,12 +24,8 @@ if _SRC_DIR not in sys.path:
 from stock_features import build_features as _shared_build_features
 import auto_retrain as _auto_retrain
 
-# Секрет для владельца: ?owner=<ключ> показывает приватные блоки (статистика монетки, управление моделью)
 OWNER_KEY = "liza-coin-2026"
 
-# ─────────────────────────────────────────────
-#  Константы
-# ─────────────────────────────────────────────
 ARTIFACTS = Path(__file__).parent / "data/artifacts/sklearn"
 TICKERS_US = [
     "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA",
@@ -55,17 +45,14 @@ CHART_LINE = "rgba(15, 23, 42, 0.12)"
 
 ARTIFACTS_OLD  = Path(__file__).parent / "data/artifacts/sklearn"
 ARTIFACTS_LGBM = Path(__file__).parent / "data/artifacts/lgbm"
-# Используем LightGBM если есть, иначе старые sklearn
 ARTIFACTS = ARTIFACTS_LGBM if (ARTIFACTS_LGBM / "models.pkl").exists() else ARTIFACTS_OLD
 USING_LGBM = ARTIFACTS == ARTIFACTS_LGBM
 
 TICKER_LABELS = {
-    # US
     "AAPL": "Apple", "MSFT": "Microsoft", "GOOGL": "Google", "AMZN": "Amazon",
     "NVDA": "NVIDIA", "META": "Meta", "TSLA": "Tesla", "BRK-B": "Berkshire",
     "XOM": "ExxonMobil", "JPM": "JPMorgan", "BTC-USD": "Bitcoin",
     "ETH-USD": "Ethereum", "GC=F": "Gold", "^GSPC": "S&P 500", "^IXIC": "NASDAQ",
-    # RU
     "SBER.ME": "Сбербанк", "GAZP.ME": "Газпром", "LKOH.ME": "ЛУКОЙЛ",
     "NVTK.ME": "НОВАТЭК", "ROSN.ME": "Роснефть", "GMKN.ME": "Норникель",
     "YNDX.ME": "Яндекс", "MGNT.ME": "Магнит", "MTSS.ME": "МТС",
@@ -78,9 +65,6 @@ MARKET_FLAGS = {
     **{t: "🇷🇺" for t in TICKERS_RU},
 }
 
-# ─────────────────────────────────────────────
-#  Страница
-# ─────────────────────────────────────────────
 st.set_page_config(
     page_title="Предсказания",
     page_icon=":material/insights:",
@@ -88,8 +72,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Глобальные стили — плоский минималистичный дизайн (см. Figma design system:
-# Primary #0052f1, Bg-Blue #e5eeff, Body Text #3b3e45, Radius 12)
 st.markdown("""
 <style>
 .stApp {
@@ -196,7 +178,6 @@ div.stButton > button[kind="secondary"]:hover {
 
 
 def apply_glass_chart_theme(fig, xaxis=None, yaxis=None, **extra_layout):
-    """Единый светлый glass-стиль для Plotly."""
     xaxis = xaxis or {}
     yaxis = yaxis or {}
     base_axis = dict(showgrid=True, gridcolor=CHART_GRID, zerolinecolor=CHART_LINE)
@@ -250,12 +231,8 @@ def explain_price(last_close: float, delta_pct: float) -> str:
     )
 
 
-# ─────────────────────────────────────────────
-#  Загрузка моделей и макро (кэш)
-# ─────────────────────────────────────────────
 @st.cache_resource(show_spinner="Загружаю модели…")
 def load_models(_version: float = 0.0):
-    """_version — mtime переобученной модели: смена значения сбрасывает кэш и подхватывает новую."""
     art = _auto_retrain.pick_artifacts_dir(ARTIFACTS_LGBM) if USING_LGBM else ARTIFACTS
     models   = joblib.load(art / "models.pkl")
     features = joblib.load(art / "feature_cols.pkl")
@@ -267,7 +244,6 @@ def load_models(_version: float = 0.0):
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_macro() -> pd.DataFrame:
-    """Загружаем VIX, TNX, DXY — нужны для LightGBM признаков."""
     if not USING_LGBM:
         return pd.DataFrame()
     macro_tickers = {"vix": "^VIX", "tnx": "^TNX", "dxy": "DX-Y.NYB"}
@@ -293,7 +269,6 @@ def fetch_data(ticker: str, period: str = "2y") -> pd.DataFrame:
 
 
 def build_features(df: pd.DataFrame, macro: pd.DataFrame = None) -> pd.DataFrame:
-    """Строим 39 признаков для LightGBM. Реализация — в src/stock_features.py (общая с обучением)."""
     return _shared_build_features(df, macro)
 
 
@@ -305,7 +280,6 @@ def predict_ticker(ticker: str, models, feature_cols, macro=None):
     if df.empty:
         return None, df_raw
 
-    # Проверяем наличие всех нужных признаков
     missing = [c for c in feature_cols if c not in df.columns]
     if missing:
         return None, df_raw
@@ -322,9 +296,6 @@ def predict_ticker(ticker: str, models, feature_cols, macro=None):
     return result, df_raw
 
 
-# ─────────────────────────────────────────────
-#  Sidebar
-# ─────────────────────────────────────────────
 with st.sidebar:
     st.markdown("## :material/insights: Предсказания")
     st.caption("Рыночные прогнозы на базе ML")
@@ -375,9 +346,6 @@ with st.sidebar:
     st.caption(f"Обновлено: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
 
 
-# ─────────────────────────────────────────────
-#  Загружаем модели
-# ─────────────────────────────────────────────
 try:
     models, feature_cols, train_summary = load_models(_auto_retrain.live_version())
     models_loaded = True
@@ -386,7 +354,6 @@ except Exception as e:
     st.error(f"Не удалось загрузить модели: {e}")
     st.info("Запусти `python scripts/train_now.py` для обучения.")
 
-# Автопереобучение: если модель старше 7 дней — тихо переобучаем в фоне (GitHub Actions не нужны)
 if USING_LGBM:
     try:
         _auto_retrain.maybe_start(ARTIFACTS_LGBM)
@@ -399,9 +366,6 @@ except Exception:
     macro_data = pd.DataFrame()
 
 
-# ═══════════════════════════════════════════════
-#  СТРАНИЦА: ДАШБОРД
-# ═══════════════════════════════════════════════
 if page == ":material/dashboard: Дашборд":
     st.title(":material/dashboard: Рыночный дашборд")
     st.caption("Прогнозы на основе обученных моделей. Обновляется каждые 5 минут.")
@@ -409,10 +373,8 @@ if page == ":material/dashboard: Дашборд":
     if not models_loaded:
         st.stop()
 
-    # Табы по рынкам
     tab_us, tab_ru = st.tabs(["🇺🇸 США / Крипто / Индексы", "🇷🇺 Россия (MOEX)"])
 
-    # Метка горизонтов в зависимости от модели
     H1_KEY  = "target_p5_up"  if USING_LGBM else "target_p1_up"
     H2_KEY  = "target_p20_up"
     H1_LABEL = "p↑(5д)"  if USING_LGBM else "p↑(1д)"
@@ -446,7 +408,6 @@ if page == ":material/dashboard: Дашборд":
             return
         df_table = pd.DataFrame(rows)
 
-        # Сводные метрики
         n_all = len(df_table)
         up1, dn1 = int((df_table[H1_LABEL] > 0.55).sum()), int((df_table[H1_LABEL] < 0.45).sum())
         up20, dn20 = int((df_table[H2_LABEL] > 0.55).sum()), int((df_table[H2_LABEL] < 0.45).sum())
@@ -521,12 +482,6 @@ if page == ":material/dashboard: Дашборд":
         render_market_tab(TICKERS_RU, "Россия MOEX")
 
 
-
-# ═══════════════════════════════════════════════
-#  СТРАНИЦА: ТИКЕР
-# ═══════════════════════════════════════════════
-
-    # ── Качество модели (для всех): откуда цифры и стало ли лучше после обучения ──
     if models_loaded and USING_LGBM:
         st.divider()
         with st.expander(":material/analytics: Качество модели и история обучения", expanded=False):
@@ -551,7 +506,6 @@ elif page == ":material/search: Тикер":
         st.error("Нет данных по тикеру.")
         st.stop()
 
-    # ── Последняя цена ──
     last_row  = df_raw.iloc[-1]
     prev_row  = df_raw.iloc[-2]
     last_close = float(last_row["Close"])
@@ -581,20 +535,17 @@ elif page == ":material/search: Тикер":
 
     st.divider()
 
-    # ── График цены ──
     st.markdown('<div class="section-header">График цены</div>',
                 unsafe_allow_html=True)
 
     df_plot = df_raw.tail({"3mo": 63, "6mo": 126, "1y": 252,
                             "2y": 504, "5y": 1260}.get(period, 252))
 
-    # Скользящие средние
     df_plot = df_plot.copy()
     df_plot["MA50"]  = df_plot["Close"].rolling(50).mean()
     df_plot["MA200"] = df_plot["Close"].rolling(200).mean()
 
     fig = go.Figure()
-    # Candle / area
     fig.add_trace(go.Scatter(
         x=df_plot.index, y=df_plot["Close"],
         mode="lines", name="Цена",
@@ -619,7 +570,6 @@ elif page == ":material/search: Тикер":
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # ── Volume + RSI ──
     col_v, col_rsi = st.columns(2)
 
     with col_v:
@@ -672,7 +622,6 @@ elif page == ":material/search: Тикер":
             )
             st.plotly_chart(fig_rsi, use_container_width=True)
 
-    # ── Прогнозная карточка ──
     if pred:
         st.divider()
         st.markdown('<div class="section-header">Детальный прогноз</div>',
@@ -680,7 +629,6 @@ elif page == ":material/search: Тикер":
         col_g, col_t = st.columns([1, 2])
 
         with col_g:
-            # Gauge для p5_up / p1_up
             _h1_k = "target_p5_up" if USING_LGBM else "target_p1_up"
             _h1_title = "Вероятность роста (5 дней)" if USING_LGBM else "Вероятность роста завтра"
             p1 = pred[_h1_k]
@@ -747,9 +695,6 @@ elif page == ":material/search: Тикер":
             )
 
 
-# ═══════════════════════════════════════════════
-#  СТРАНИЦА: КОНФЛИКТЫ
-# ═══════════════════════════════════════════════
 elif page == ":material/swords: Конфликты":
     try:
         import importlib, sys
@@ -771,8 +716,6 @@ elif page == ":material/toll: Монетка":
         _sys.path.insert(0, _SRC)
     from coin_flip import record_page_view, flip_coin, get_stats
 
-    # Статистика раздела (просмотры/подбросы) видна только владельцу проекта —
-    # добавь ?owner=liza-coin-2026 к ссылке, чтобы увидеть цифры.
     _is_owner = st.query_params.get("owner") == OWNER_KEY
 
     st.title(":material/toll: Монетка")
@@ -804,7 +747,6 @@ elif page == ":material/toll: Монетка":
         n = st.session_state["_coin_flip_n"]
         result = st.session_state["_coin_result"]
 
-        # Финальный угол поворота (плюс несколько полных оборотов для эффекта вращения)
         spins = 3 * 360
         end_deg = {"heads": 0, "tails": 180, "edge": 90}.get(result, 0)
         total_deg = spins + end_deg if result else 0

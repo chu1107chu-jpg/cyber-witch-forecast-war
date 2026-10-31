@@ -1,4 +1,3 @@
-"""TensorFlow LSTM/GRU для временных рядов."""
 import logging
 from pathlib import Path
 

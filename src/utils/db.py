@@ -1,4 +1,3 @@
-"""Клиент Supabase."""
 import os
 from functools import lru_cache
 from supabase import create_client, Client

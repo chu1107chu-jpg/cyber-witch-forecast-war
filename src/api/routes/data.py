@@ -1,4 +1,3 @@
-"""/api/v1/data — tickers / quotes / news"""
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 from typing import List, Optional
@@ -61,7 +60,6 @@ async def get_news(
 
 @router.get("/big-news-analysis")
 async def big_news_analysis(ticker: str = Query(...)):
-    """Аналитическая сводка: реакция рынка на 'крупные' новости за 5 лет."""
     from src.features.big_news import analyze_big_news
     result = analyze_big_news(ticker)
     return {"ticker": ticker, **result}

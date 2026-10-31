@@ -1,4 +1,3 @@
-"""Централизованный логгер (JSON-friendly)."""
 import logging
 import sys
 

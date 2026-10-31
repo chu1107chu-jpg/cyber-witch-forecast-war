@@ -467,7 +467,7 @@
         const r = autoBattle(G, fid, ref.id, best.n, rng, opts.skill);
         if (r) {
           attacks++;
-          rep.push({ text: r.text, ai: true, vsPlayer: wasPlayer, captured: r.captured, capital: !!r.capital, region: best.n, from: r.from,
+          rep.push({ text: r.text, ai: true, vsPlayer: wasPlayer, captured: r.captured, capital: !!r.capital, region: best.n, from: r.from, fighterId: ref.id,
             attacker: fid, defender: r.defender, replay: r.replay, undefended: !!r.undefended });
         }
       }

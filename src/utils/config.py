@@ -1,4 +1,3 @@
-"""Загрузка YAML-конфигов из configs/."""
 import os
 from functools import lru_cache
 from pathlib import Path
@@ -24,7 +23,6 @@ def load_model_config() -> dict:
 
 
 def load_games_config() -> list[dict]:
-    """Загружает multi-document YAML (slot + snake)."""
     path = CONFIG_DIR / "games.yaml"
     with open(path, "r", encoding="utf-8") as f:
         docs = list(yaml.safe_load_all(f))

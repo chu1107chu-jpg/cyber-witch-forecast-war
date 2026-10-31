@@ -112,6 +112,8 @@
         return { ok: true, index: idx, mult, base, payout: newPayout, delta: newPayout - base, balance: s.balance };
       },
 
+      grant(amount) { s.balance += Math.max(0, amount | 0); save(); return s.balance; },
+
       reset() { s = fresh(); save(); },
     };
     return api;

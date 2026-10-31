@@ -1,16 +1,9 @@
-"""Provably-Fair RNG для Spin-игры (HMAC-SHA256).
-
-SpinEngine создаётся ОДИН РАЗ на game_id на уровне процесса (get_engine).
-Это важно: _spin_counter хранит монотонный счётчик per-user и должен
-жить между запросами. В multi-worker деплое нужен Redis-счётчик.
-"""
 import hashlib
 import hmac
 import os
 from datetime import date
 from typing import Optional
 
-# Реестр движков: {game_id: SpinEngine}
 _ENGINE_REGISTRY: dict[str, "SpinEngine"] = {}
 
 
@@ -37,13 +30,9 @@ def _to_u01(b: bytes) -> float:
 
 
 def get_engine(game_id: str = "utility_slot_v1") -> "SpinEngine":
-    """Вернуть (или создать) синглтон SpinEngine для данного game_id.
-    Сбрасывается автоматически при смене дня (_server_seed ротируется).
-    """
     today = date.today().isoformat()
     key = f"{game_id}:{today}"
     if key not in _ENGINE_REGISTRY:
-        # Чистим устаревшие ключи (другой день)
         stale = [k for k in _ENGINE_REGISTRY if not k.endswith(today)]
         for k in stale:
             del _ENGINE_REGISTRY[k]
@@ -100,7 +89,6 @@ class SpinEngine:
                 r = rv
                 break
 
-        # near-miss: u очень близко к границе JACKPOT
         jackpot_boundary = self._cum[0][0]
         if abs(u - jackpot_boundary) < 0.002 and bucket != "JACKPOT":
             near_miss = True

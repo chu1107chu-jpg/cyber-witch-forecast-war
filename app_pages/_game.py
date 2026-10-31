@@ -1,17 +1,3 @@
-"""
-Страница «Игра» — «Политическая арена».
-
-Игра полностью клиентская (HTML/JS без сервера): static/arena/. Бой, кошелёк и прогресс
-считаются в браузере игрока, поэтому ничего не «засыпает» и не требует отдельного хостинга.
-
-Как встраивается: index.html собирается в одну строку (CSS и JS подставляются внутрь) и
-показывается в iframe; картинки бойцов берутся из static/arena/img/ через статическую
-раздачу Streamlit (server.enableStaticServing = true в .streamlit/config.toml).
-Такой способ работает и на старых версиях Streamlit, где HTML/JS из static/ не раздаются.
-
-Чтобы вынести игру на отдельный адрес (например Firebase Hosting) — задай GAME_URL
-в Streamlit secrets или переменной окружения: страница покажет этот адрес вместо встроенной копии.
-"""
 import base64
 import json
 import os
@@ -38,7 +24,6 @@ def _external_url() -> str:
 
 @st.cache_data(show_spinner=False)
 def _bundle_html() -> str:
-    """index.html + весь CSS/JS одной строкой (без обращений к static для кода)."""
     html = (ARENA_DIR / "index.html").read_text(encoding="utf-8")
 
     def inline_css(m: re.Match) -> str:
@@ -80,7 +65,7 @@ def render_game_page() -> None:
 
 
 def _frame(src: str) -> None:
-    if hasattr(st, "iframe"):                  # новые версии Streamlit
+    if hasattr(st, "iframe"):
         st.iframe(src, height=FRAME_HEIGHT)
     else:
         import streamlit.components.v1 as components

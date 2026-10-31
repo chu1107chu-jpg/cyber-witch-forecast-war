@@ -1,4 +1,3 @@
-"""/api/v1/games — guess-sign, history"""
 from fastapi import APIRouter, Depends, Header, Query
 from pydantic import BaseModel, Field
 from typing import Literal, Optional
@@ -22,12 +21,10 @@ def get_current_user(authorization: str = Header(...)):
 
 @router.post("/guess-sign")
 async def guess_sign(req: GuessSignReq, user=Depends(get_current_user)):
-    """Сделать ставку на направление цены."""
     from src.wallet.credits import debit, credit
     from src.pipeline.predict import run_predict
     from datetime import date
 
-    # списываем ставку
     d = debit(
         user_id=user["sub"],
         amount=req.stake,
@@ -38,7 +35,6 @@ async def guess_sign(req: GuessSignReq, user=Depends(get_current_user)):
         from fastapi import HTTPException
         raise HTTPException(402, "Insufficient balance")
 
-    # получаем прогноз как «real_sign» (упрощённо)
     preds = run_predict(date.today().isoformat(), [req.ticker])
     pred = preds[0] if preds else None
     real_sign = "up" if (pred and pred.r1 > 0) else "down"
@@ -48,7 +44,6 @@ async def guess_sign(req: GuessSignReq, user=Depends(get_current_user)):
     if win:
         credit(user_id=user["sub"], amount=payout, description="game_win")
 
-    # запись раунда
     from src.utils.db import get_db
     db = get_db()
     db.table("game_rounds").insert({

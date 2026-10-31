@@ -1,27 +1,3 @@
-"""
-train_lstm_conflict.py — LSTM-подобная модель для прогноза ИВПН конфликтов.
-
-Архитектура (текущая): sklearn MLP с оконным подходом
-  X = [ИВПН(t-5), ИВПН(t-4), ..., ИВПН(t-0)]  — окно 6 значений
-  y = ИВПН(t+1)                                 — следующий месяц
-  Признаки: +лидер-поправка +злодеяния +рецессия-риск
-
-LSTM (PyTorch) можно подключить поменяв _build_model() — структура та же.
-
-Данные: синтетические траектории ИВПН на основе:
-  1. Марковской матрицы переходов (ACLED/UCDP калибровка)
-  2. Непрерывного отображения состояние→ИВПН + гауссов шум σ=0.04
-  3. Профилей лидеров и финансовых факторов (дополнительные признаки)
-
-Цель: предсказать, куда движется ИВПН → усилить статичный ИВПН-снимок.
-
-Запуск:
-  python scripts/train_lstm_conflict.py
-
-Артефакты:
-  data/artifacts/conflict/mlp_ivpn_predictor.pkl
-  data/artifacts/conflict/train_summary_conflict.json
-"""
 
 import json
 import pickle
@@ -36,22 +12,16 @@ from sklearn.preprocessing import StandardScaler
 
 warnings.filterwarnings("ignore")
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  КОНФИГУРАЦИЯ
-# ─────────────────────────────────────────────────────────────────────────────
-WINDOW          = 6          # окно (месяцев)
-N_TRAJECTORIES  = 2000       # синтетических конфликтов
-TRAJ_LEN        = 60         # месяцев на траекторию
-NOISE_STD       = 0.035      # гауссов шум ИВПН (реалистичная неопределённость)
+WINDOW          = 6
+N_TRAJECTORIES  = 2000
+TRAJ_LEN        = 60
+NOISE_STD       = 0.035
 RANDOM_SEED     = 42
 
 ARTIFACTS_DIR   = Path("data/artifacts/conflict")
 ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  МАРКОВСКАЯ МАТРИЦА (копия из conflict_forecast.py)
-# ─────────────────────────────────────────────────────────────────────────────
-STATE_IVPN_MEAN = [0.18, 0.36, 0.54, 0.75, 0.78]  # центр ИВПН для каждого состояния
+STATE_IVPN_MEAN = [0.18, 0.36, 0.54, 0.75, 0.78]
 STATE_IVPN_STD  = [0.06, 0.06, 0.07, 0.06, 0.06]
 
 MARKOV_MATRIX = np.array([
@@ -62,16 +32,13 @@ MARKOV_MATRIX = np.array([
     [0.08, 0.22, 0.19, 0.10, 0.41],
 ])
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  ДИАПАЗОНЫ ЛИДЕРСКИХ ПРИЗНАКОВ (для синтетики)
-# ─────────────────────────────────────────────────────────────────────────────
 LEADER_FEATURE_RANGES = {
     "hawkishness_a":  (0.30, 0.95),
     "hawkishness_b":  (0.30, 0.95),
     "approval_a":     (0.20, 0.75),
     "approval_b":     (0.10, 0.60),
-    "election_near":  (0, 1),         # 1 = выборы в 12 мес.
-    "age_legacy_a":   (0, 1),         # 1 = лидер 70+
+    "election_near":  (0, 1),
+    "age_legacy_a":   (0, 1),
     "age_legacy_b":   (0, 1),
     "atrocity_a":     (0.10, 0.85),
     "atrocity_b":     (0.10, 0.90),
@@ -84,18 +51,7 @@ LEADER_FEATURE_RANGES = {
 N_LEADER_FEATURES = len(LEADER_FEATURE_RANGES)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  ГЕНЕРАЦИЯ СИНТЕТИЧЕСКИХ ТРАЕКТОРИЙ
-# ─────────────────────────────────────────────────────────────────────────────
 def generate_trajectory(rng: np.random.Generator, length: int = TRAJ_LEN):
-    """
-    Генерирует одну траекторию ИВПН длиной `length` месяцев.
-    Returns:
-        ivpn_seq: array(length,)           — непрерывный ИВПН
-        state_seq: array(length,)          — дискретные состояния 0-4
-        leader_feats: array(N_LEADER_FEATURES,)  — фиксированный профиль конфликта
-    """
-    # Случайное начальное состояние (распределение реалистично: больше Мира/Напряжённости)
     init_probs = np.array([0.30, 0.35, 0.20, 0.10, 0.05])
     state = rng.choice(5, p=init_probs)
 
@@ -103,15 +59,12 @@ def generate_trajectory(rng: np.random.Generator, length: int = TRAJ_LEN):
     ivpn_vals = []
 
     for _ in range(length):
-        # ИВПН = центр состояния + шум + тренд (медленная инерция)
         iv = rng.normal(STATE_IVPN_MEAN[state], STATE_IVPN_STD[state] + NOISE_STD)
         iv = float(np.clip(iv, 0.0, 1.0))
         ivpn_vals.append(iv)
-        # Следующее состояние
         state = rng.choice(5, p=MARKOV_MATRIX[state])
         states.append(state)
 
-    # Лидерские признаки — фиксированы на всю траекторию (одна война, одни лидеры)
     feats = []
     for lo, hi in LEADER_FEATURE_RANGES.values():
         if isinstance(lo, int):
@@ -123,19 +76,13 @@ def generate_trajectory(rng: np.random.Generator, length: int = TRAJ_LEN):
 
 
 def build_dataset(n_trajectories: int = N_TRAJECTORIES, window: int = WINDOW):
-    """
-    Собирает датасет из синтетических траекторий.
-    Каждый пример:
-        X = [ИВПН(t-window+1)…ИВПН(t), leader_feats]  shape = (window + N_LEADER_FEATURES,)
-        y = ИВПН(t+1)
-    """
     rng = np.random.default_rng(RANDOM_SEED)
     X_rows, y_rows = [], []
 
     for _ in range(n_trajectories):
         ivpn_seq, _, leader_feats = generate_trajectory(rng)
         for t in range(window, len(ivpn_seq) - 1):
-            window_slice = ivpn_seq[t - window:t]          # 6 значений
+            window_slice = ivpn_seq[t - window:t]
             row = np.concatenate([window_slice, leader_feats])
             X_rows.append(row)
             y_rows.append(ivpn_seq[t + 1])
@@ -145,14 +92,10 @@ def build_dataset(n_trajectories: int = N_TRAJECTORIES, window: int = WINDOW):
     return X, y
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  ОБУЧЕНИЕ МОДЕЛИ
-# ─────────────────────────────────────────────────────────────────────────────
 def train_model(X_train, y_train):
-    """MLP с двумя скрытыми слоями — drop-in замена LSTM при наличии PyTorch."""
     model = MLPRegressor(
         hidden_layer_sizes=(128, 64, 32),
-        activation="tanh",           # tanh — стандарт для LSTM-ячеек
+        activation="tanh",
         solver="adam",
         learning_rate_init=0.001,
         max_iter=300,
@@ -165,11 +108,7 @@ def train_model(X_train, y_train):
     return model
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  АНАЛИЗ ВАЖНОСТИ ПРИЗНАКОВ (пермутационный)
-# ─────────────────────────────────────────────────────────────────────────────
 def permutation_importance(model, scaler, X_val, y_val, feature_names):
-    """Оценивает вклад каждого признака через перестановку."""
     X_sc = scaler.transform(X_val)
     base_mae = mean_absolute_error(y_val, model.predict(X_sc))
     importances = {}
@@ -182,9 +121,6 @@ def permutation_importance(model, scaler, X_val, y_val, feature_names):
     return dict(sorted(importances.items(), key=lambda x: -x[1]))
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  MAIN
-# ─────────────────────────────────────────────────────────────────────────────
 def main():
     print("=" * 60)
     print("  LSTM-conflict: прогноз ИВПН (windowed MLP)")
@@ -228,22 +164,21 @@ def main():
         print(f"   {name:30s}  ΔMAE = {score:+.5f}")
 
     print("\n6. Реальный тест — прогноз Иран/США (Кризис, ИВПН ≈ 0.82) ...")
-    # Симулируем: последние 6 мес. ИВПН нарастают к 0.82
     recent_ivpn = np.array([0.70, 0.74, 0.77, 0.79, 0.81, 0.82])
     leader_feats_iran = np.array([
-        0.72,  # hawkishness_a (Трамп)
-        0.78,  # hawkishness_b (Хаменеи)
-        0.44,  # approval_a
-        0.25,  # approval_b
-        0.0,   # election_near (44 мес. до выборов)
-        1.0,   # age_legacy_a (70+)
-        1.0,   # age_legacy_b (80+)
-        0.38,  # atrocity_a (США)
-        0.68,  # atrocity_b (Иран)
-        0.25,  # recession_a
-        0.78,  # recession_b
-        1.24,  # debt_gdp_a
-        0.40,  # debt_gdp_b
+        0.72,
+        0.78,
+        0.44,
+        0.25,
+        0.0,
+        1.0,
+        1.0,
+        0.38,
+        0.68,
+        0.25,
+        0.78,
+        1.24,
+        0.40,
     ])
     X_test = np.concatenate([recent_ivpn, leader_feats_iran]).reshape(1, -1).astype(np.float32)
     X_test_sc = scaler.transform(X_test)

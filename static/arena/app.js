@@ -7,6 +7,7 @@
 
   const E = window.ArenaEngine;
   const S = window.ArenaStore.store;
+  const FX = window.ArenaFX;
   const FIGHTERS = window.ARENA_FIGHTERS || [];
   const BY_ID = Object.fromEntries(FIGHTERS.map(f => [f.id, f]));
   const BASE = window.ARENA_BASE || '';           // в iframe Streamlit подставляется абсолютный путь к картинкам
@@ -17,7 +18,7 @@
   const snd = (name) => { try { if (typeof sfx !== 'undefined' && sfx[name]) sfx[name](); } catch (e) { /* звук не критичен */ } };
   const shortName = (n) => n.split(' ').slice(-1)[0];
   // картинки: встроенные (data:) если страница собрана для Streamlit, иначе файлы рядом
-const avatarUrl = (f) => (window.ARENA_IMG && window.ARENA_IMG[f.id]) || BASE + f.avatar;
+  const avatarUrl = (f) => (f.avatar && f.avatar.startsWith('data:')) ? f.avatar : (window.ARENA_IMG && window.ARENA_IMG[f.id]) || BASE + f.avatar;
 
   const TYPE_ICON = { light: '⚡', heavy: '🔨', special: '✨', ultimate: '💀' };
   const TYPE_NAME = { light: 'быстрый', heavy: 'тяжёлый', special: 'спец', ultimate: 'УЛЬТА' };
@@ -25,14 +26,18 @@ const avatarUrl = (f) => (window.ARENA_IMG && window.ARENA_IMG[f.id]) || BASE + 
   // ── Состояние ────────────────────────────────────────────────
   let selectedA = null, selectedB = null;
   let betSide = null;            // 'a' | 'b' — за кого играем
-  let fight = null, busy = false;
+  let fight = null, busy = false, ctx = null;
   let currentBet = 0, currentMult = 0, currentAmountUI = 10;
   let query = '', typeFilter = 'all';
 
-  const screens = { select: $('#screenSelect'), bet: $('#screenBet'), fight: $('#screenFight'), result: $('#screenResult'), spin: $('#screenSpin') };
+  const screens = {
+    menu: $('#screenMenu'), select: $('#screenSelect'), bet: $('#screenBet'), fight: $('#screenFight'),
+    result: $('#screenResult'), spin: $('#screenSpin'), campStart: $('#screenCampStart'), map: $('#screenMap'),
+  };
   function showScreen(name) {
-    Object.values(screens).forEach(s => s.classList.remove('active'));
+    Object.values(screens).forEach(s => s && s.classList.remove('active'));
     screens[name].classList.add('active');
+    $('#btnMenu').style.display = name === 'menu' ? 'none' : '';
     window.scrollTo(0, 0);
   }
 
@@ -239,12 +244,61 @@ const avatarUrl = (f) => (window.ARENA_IMG && window.ARENA_IMG[f.id]) || BASE + 
   }
 
   // ── Бой ─────────────────────────────────────────────────────
-  function setHp(side, hp, max) {
-    const pct = Math.max(0, Math.min(100, hp / max * 100));
-    const bar = $(`#hpBar${side}`);
-    bar.style.width = `${pct}%`;
-    bar.className = 'hp-fill' + (pct < 20 ? ' critical' : pct < 40 ? ' low' : '');
-    $(`#hpText${side}`).textContent = `${Math.max(0, Math.round(hp))}/${max}`;
+  const hooks = {
+    ult: () => snd('combo'),
+    swing: () => snd('click'),
+    hit: (res) => snd(res.crit ? 'crit' : 'hit'),
+    miss: () => snd('miss'),
+    counter: () => snd('counter'),
+    combo: () => snd('combo'),
+  };
+
+  function stageSetup(fa, fb, side, title) {
+    FX.init($('#stage'));
+    FX.reset();
+    ['A', 'B'].forEach(U => {
+      const f = U === 'A' ? fa : fb;
+      $(`#fightEmoji${U}`).innerHTML = `<img class="fight-avatar" src="${avatarUrl(f)}" alt="">`;
+      attachImgFallback($(`#fightEmoji${U} img`), f);
+      $(`#fightName${U}`).textContent = f.name + (side && U.toLowerCase() === side ? ' · ты' : '');
+      $(`#status${U}`).innerHTML = '';
+      FX.setHp(U.toLowerCase(), f.hp, f.hp, false);
+    });
+    $('#fighterBoxA').classList.toggle('me', side === 'a');
+    $('#fighterBoxB').classList.toggle('me', side === 'b');
+    $('#stageEnd').style.display = 'none';
+    $('#stageEnd').innerHTML = '';
+    $('#fightTitle').textContent = title || '';
+    $('#fightLog').innerHTML = '';
+    $('#movePicker').style.display = 'none';
+    $('#fightRound').textContent = 'РАУНД 1';
+    $('#stage').dataset.terrain = (ctx && ctx.terrain) || '';
+    updateSpeedBtn();
+  }
+
+  function updateSpeedBtn() { $('#speedBtn').textContent = `⏩ ${FX.speed}×`; }
+
+  function cycleSpeed() {
+    FX.speed = FX.speed >= 4 ? 1 : FX.speed * 2;
+    updateSpeedBtn();
+    snd('click');
+  }
+
+  async function beginFight(c) {
+    ctx = c;
+    fight = E.createFight(c.fa, c.fb, c.side);
+    stageSetup(c.fa, c.fb, c.side, c.title);
+    showScreen('fight');
+    snd('fightStart');
+    appendLog({ k: 'round', t: `Гонг! ${c.fa.name} против ${c.fb.name}.` });
+    busy = true;
+    await FX.banner('FIGHT!', 'round', 900);
+    busy = false;
+    showMovePicker(E.getUserMoves(fight), 1);
+  }
+
+  function runFight(o) {
+    return beginFight(Object.assign({ mode: 'camp', side: 'a' }, o));
   }
 
   function startFight() {
@@ -257,22 +311,7 @@ const avatarUrl = (f) => (window.ARENA_IMG && window.ARENA_IMG[f.id]) || BASE + 
     const me = betSide === 'a' ? selectedA : selectedB, foe = betSide === 'a' ? selectedB : selectedA;
     currentMult = amt > 0 ? E.payoutMult(E.winProb(me, foe)) : 0;
     refreshWallet();
-
-    fight = E.createFight(selectedA, selectedB, betSide);
-    ['A', 'B'].forEach(s => {
-      const f = s === 'A' ? selectedA : selectedB;
-      $(`#fightEmoji${s}`).innerHTML = `<img class="fight-avatar" src="${avatarUrl(f)}" alt="">`;
-      attachImgFallback($(`#fightEmoji${s} img`), f);
-      $(`#fightName${s}`).textContent = f.name + (s.toLowerCase() === betSide ? ' (ты)' : '');
-      setHp(s, f.hp, f.hp);
-    });
-    $('#fightLog').innerHTML = '';
-    $('#movePicker').style.display = 'none';
-    $('#fightRound').textContent = 'РАУНД 1';
-    showScreen('fight');
-    snd('fightStart');
-    appendLog({ k: 'round', t: `Гонг! ${selectedA.name} против ${selectedB.name}. Ты играешь за ${me.name}.` });
-    showMovePicker(E.getUserMoves(fight), 1);
+    beginFight({ mode: 'arena', fa: selectedA, fb: selectedB, side: betSide, title: `Арена · ты за ${me.name}` });
   }
 
   function appendLog(line) {
@@ -296,7 +335,7 @@ const avatarUrl = (f) => (window.ARENA_IMG && window.ARENA_IMG[f.id]) || BASE + 
     grid.innerHTML = '';
     info.moves.forEach(m => {
       const btn = document.createElement('button');
-      btn.className = 'move-btn';
+      btn.className = 'move-btn type-' + m.type;
       btn.disabled = !m.available;
       btn.innerHTML = `
         <div class="move-name">${m.name}</div>
@@ -308,48 +347,10 @@ const avatarUrl = (f) => (window.ARENA_IMG && window.ARENA_IMG[f.id]) || BASE + 
     $('#movePicker').style.display = 'block';
   }
 
-  function floatText(side, text, cls) {
-    const box = $(`#fighterBox${side}`);
-    if (!box) return;
-    const el = document.createElement('div');
-    el.className = `dmg-num ${cls}`;
-    el.textContent = text;
-    el.style.left = '50%'; el.style.top = '30%'; el.style.marginLeft = '-20px';
-    box.appendChild(el);
-    setTimeout(() => el.remove(), 1000);
-  }
-
-  function indicator(cls, text) {
-    const el = document.createElement('div');
-    el.className = cls; el.textContent = text;
-    $('#fxLayer').appendChild(el);
-    setTimeout(() => el.remove(), 1000);
-  }
-
-  function pulse(el, cls, ms) { if (!el) return; el.classList.add(cls); setTimeout(() => el.classList.remove(cls), ms); }
-
-  async function animateRound(r) {
-    for (const line of r.lines) {
-      await sleep(line.k === 'round' ? 150 : 380);
-      appendLog(line);
-      if (line.k === 'crit') snd('crit');
-      else if (line.k === 'hit') snd('hit');
-      else if (line.k === 'miss') snd('miss');
-      else if (line.k === 'combo') { snd('combo'); indicator('combo-indicator', line.t.split(':')[0]); }
-      else if (line.k === 'counter') { snd('counter'); indicator('counter-indicator', 'КОНТРУДАР!'); }
-    }
-    // урон: A бьёт B, B бьёт A
-    [['B', r.res_a], ['A', r.res_b]].forEach(([target, res]) => {
-      if (res.miss) floatText(target, 'ПРОМАХ', 'miss');
-      else {
-        floatText(target, `−${res.dmg}`, res.crit ? 'crit' : 'hit');
-        pulse($(`#fightEmoji${target}`), 'crit-flash', 300);
-      }
-    });
-    if (r.res_a.crit || r.res_b.crit) pulse($('#fightArena'), 'screen-shake', 400);
-    setHp('A', r.hp_a, fight.a.maxHp);
-    setHp('B', r.hp_b, fight.b.maxHp);
-    await sleep(650);
+  async function animateRound(r, maxA, maxB) {
+    $('#fightRound').textContent = `РАУНД ${r.round} / ${E.C.ROUNDS}`;
+    await FX.playRound(r, maxA, maxB, hooks);
+    r.lines.forEach(appendLog);
   }
 
   async function playRound(moveIndex) {
@@ -359,14 +360,71 @@ const avatarUrl = (f) => (window.ARENA_IMG && window.ARENA_IMG[f.id]) || BASE + 
     let r;
     try { r = E.playRound(fight, moveIndex); }
     catch (e) { busy = false; toast(e.message || 'Ошибка хода'); snd('error'); $('#movePicker').style.display = 'block'; return; }
-    await animateRound(r);
+    await animateRound(r, fight.a.maxHp, fight.b.maxHp);
+    if (r.fight_over) {
+      await FX.finish(r.result, r.result.winner_side, ctx.side);
+      busy = false;
+      finishFight(r.result);
+    } else {
+      busy = false;
+      showMovePicker({ moves: r.moves, hint: r.hint }, r.round_next);
+    }
+  }
+
+  function stageEnd(result, o) {
+    const box = $('#stageEnd');
+    box.innerHTML = `
+      <div class="end-card ${o.cls || ''}">
+        <div class="end-title">${o.title}</div>
+        <div class="end-sub">${o.sub || ''}</div>
+        <button class="btn-primary" id="btnStageDone">${o.button || 'ДАЛЬШЕ'}</button>
+      </div>`;
+    box.style.display = 'flex';
+    $('#btnStageDone').addEventListener('click', () => { snd('click'); box.style.display = 'none'; o.onClick(); });
+  }
+
+  async function playReplay(rep, o) {
+    o = o || {};
+    ctx = { mode: 'replay', terrain: o.terrain };
+    fight = null;
+    stageSetup(rep.a, rep.b, o.side || null, o.title || 'Повтор боя');
+    $('#movePicker').style.display = 'none';
+    showScreen('fight');
+    snd('fightStart');
+    busy = true;
+    const prevSpeed = FX.speed;
+    if (o.speed) FX.speed = o.speed;
+    updateSpeedBtn();
+    await FX.banner('БОЙ!', 'round', 700);
+    for (const r of rep.rounds) await animateRound(r, rep.a.hp, rep.b.hp);
+    await FX.finish(rep.result, rep.result.winner_side, o.side || null);
     busy = false;
-    if (r.fight_over) finishFight(r.result);
-    else showMovePicker({ moves: r.moves, hint: r.hint }, r.round_next);
+    const w = rep.result.winner_side === 'a' ? rep.a : rep.b;
+    FX.speed = prevSpeed;
+    stageEnd(rep.result, {
+      title: `${w.name} побеждает`,
+      sub: rep.result.method === 'KO' ? `Нокаут в ${rep.result.rounds_played}-м раунде` : 'Победа по очкам',
+      cls: o.won === false ? 'lose' : o.won ? 'win' : '',
+      button: o.button || 'ДАЛЬШЕ',
+      onClick: o.onDone || (() => {}),
+    });
   }
 
   // ── Результат ───────────────────────────────────────────────
   function finishFight(result) {
+    if (ctx.mode === 'camp') {
+      const won = result.user_won;
+      snd(won ? 'victory' : 'defeat');
+      const done = ctx.onDone;
+      stageEnd(result, {
+        title: won ? 'ПОБЕДА!' : 'ПОРАЖЕНИЕ',
+        sub: ctx.endText ? ctx.endText(won) : '',
+        cls: won ? 'win' : 'lose',
+        button: 'НА КАРТУ',
+        onClick: () => done(result),
+      });
+      return;
+    }
     const won = result.user_won;
     const settle = S.settle({
       fighterA: selectedA.id, fighterB: selectedB.id, userSide: betSide,
@@ -513,6 +571,9 @@ const avatarUrl = (f) => (window.ARENA_IMG && window.ARENA_IMG[f.id]) || BASE + 
 
   // ── События ─────────────────────────────────────────────────
   function bindEvents() {
+    $('#btnMenu').addEventListener('click', () => { snd('back'); showScreen('menu'); if (window.ArenaCamp) window.ArenaCamp.refreshMenu(); });
+    $('#menuArena').addEventListener('click', () => { snd('click'); showScreen('select'); });
+    $('#speedBtn').addEventListener('click', cycleSpeed);
     $('#btnTobet').addEventListener('click', () => { snd('click'); showBetScreen(); });
     $('#btnBackSelect').addEventListener('click', () => { snd('back'); showScreen('select'); });
     $('#betCardA').addEventListener('click', () => chooseSide('a'));
@@ -570,9 +631,15 @@ const avatarUrl = (f) => (window.ARENA_IMG && window.ARENA_IMG[f.id]) || BASE + 
     renderFighters();
     refreshWallet();
     bindEvents();
+    if (window.ArenaCamp) window.ArenaCamp.init();
+    showScreen('menu');
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 
   // для автотестов
   window.__arena = { get fight() { return fight; }, state: () => ({ selectedA, selectedB, betSide, busy }) };
+  window.ArenaApp = {
+    E, S, BY_ID, FIGHTERS, $, $$, sleep, snd, toast, avatarUrl, attachImgFallback, cardHTML, showScreen, runFight, playReplay,
+    openModal, closeModal, refreshWallet, TYPE_ICON, TYPE_NAME, shortName,
+  };
 })();

@@ -1,18 +1,3 @@
-"""
-lstm_forecast.py — Прогноз траектории уровня напряжённости на основе
-MLP-модели (обученной на исторических данных конфликтов).
-
-Файл модели: data/artifacts/conflict/mlp_ivpn_predictor.pkl
-Признаки:
-  ivpn_t-5..ivpn_t-0   — скользящее окно из 6 значений
-  hawkishness_a/b       — агрессивность лидеров
-  approval_a/b          — внутреннее одобрение лидеров
-  election_near         — выборы в ближайшие 12 мес (0/1)
-  age_legacy_a/b        — поправка за возраст/legacy-seeking
-  atrocity_a/b          — индекс злодеяний
-  recession_a/b         — риск рецессии
-  debt_gdp_a/b          — долг/ВВП
-"""
 from __future__ import annotations
 
 import math
@@ -24,9 +9,6 @@ from typing import Optional
 
 import numpy as np
 
-# ─────────────────────────────────────────────
-#  Путь к модели (относительно корня репо)
-# ─────────────────────────────────────────────
 _MODULE_DIR = Path(__file__).parent
 _REPO_ROOT  = _MODULE_DIR.parent
 MODEL_PATH  = _REPO_ROOT / "data" / "artifacts" / "conflict" / "mlp_ivpn_predictor.pkl"
@@ -48,17 +30,14 @@ def _load_model() -> Optional[dict]:
         return None
 
 
-# ─────────────────────────────────────────────
-#  Данные классы
-# ─────────────────────────────────────────────
 @dataclass
 class LSTMForecast:
-    available: bool = False         # модель загружена и предсказание успешно
-    next_ivpn: float = 0.0          # прогноз ИВПН на t+1 (следующий месяц)
-    delta: float = 0.0              # изменение vs текущего ИВПН
-    trajectory: list[float] = None  # прогноз на 3 месяца вперёд
-    direction_icon: str = "→"       # ▲ ▼ →
-    confidence: str = "низкая"      # высокая/средняя/низкая (по |delta|)
+    available: bool = False
+    next_ivpn: float = 0.0
+    delta: float = 0.0
+    trajectory: list[float] = None
+    direction_icon: str = "→"
+    confidence: str = "низкая"
     error: str = ""
 
     def __post_init__(self):
@@ -83,21 +62,11 @@ class LSTMForecast:
         return f'<b style="color:{color};">{self.next_ivpn:.3f}</b>'
 
 
-# ─────────────────────────────────────────────
-#  Вспомогательная: age_legacy feature
-# ─────────────────────────────────────────────
 def _age_legacy_feature(age: float, legacy_seeking: float) -> float:
-    """
-    Комбинирует возраст и стремление к наследию.
-    Лидеры > 70 лет с высоким legacy_seeking → выше значение.
-    """
-    age_factor = 1.0 / (1.0 + math.exp(-0.08 * (age - 65)))  # sigmoid вокруг 65 лет
+    age_factor = 1.0 / (1.0 + math.exp(-0.08 * (age - 65)))
     return float(np.clip(age_factor * legacy_seeking, 0.0, 1.0))
 
 
-# ─────────────────────────────────────────────
-#  Извлечение признаков лидеров из профиля
-# ─────────────────────────────────────────────
 def extract_leader_features(
     leader_a: dict,
     leader_b: dict,
@@ -108,10 +77,6 @@ def extract_leader_features(
     debt_gdp_a: float,
     debt_gdp_b: float,
 ) -> dict[str, float]:
-    """
-    Формирует словарь признаков лидеров для MLP-модели.
-    Ключи совпадают с feature_names модели (кроме ivpn_t-n).
-    """
     election_near_a = 1.0 if leader_a.get("election_months", 999) <= 12 else 0.0
     election_near_b = 1.0 if leader_b.get("election_months", 999) <= 12 else 0.0
     election_near = max(election_near_a, election_near_b)
@@ -134,32 +99,27 @@ def extract_leader_features(
         "atrocity_b":     float(atrocity_b),
         "recession_a":    float(recession_a),
         "recession_b":    float(recession_b),
-        "debt_gdp_a":     float(np.clip(debt_gdp_a, 0.0, 2.5) / 2.5),   # нормируем
+        "debt_gdp_a":     float(np.clip(debt_gdp_a, 0.0, 2.5) / 2.5),
         "debt_gdp_b":     float(np.clip(debt_gdp_b, 0.0, 2.5) / 2.5),
     }
 
 
-# ─────────────────────────────────────────────
-#  Автарегрессионный прогноз
-# ─────────────────────────────────────────────
 def _predict_one_step(
     model_dict: dict,
-    ivpn_window: list[float],  # 6 значений, старые → новые
+    ivpn_window: list[float],
     leader_feats: dict[str, float],
 ) -> float:
-    """Делает прогноз на 1 шаг вперёд."""
     model    = model_dict["model"]
     scaler   = model_dict["scaler"]
-    feat_names = model_dict["feature_names"]  # 19 признаков
-    window   = model_dict["window"]           # 6
+    feat_names = model_dict["feature_names"]
+    window   = model_dict["window"]
 
-    # Формируем вектор признаков в порядке feature_names
     feat_vec = []
     for name in feat_names:
         if name.startswith("ivpn_t-"):
             # ivpn_t-5 → индекс 0 (самый старый), ivpn_t-0 → индекс 5 (текущий)
-            lag = int(name.split("t-")[1])  # 5,4,3,2,1,0
-            idx = (window - 1) - lag        # 0,1,2,3,4,5
+            lag = int(name.split("t-")[1])
+            idx = (window - 1) - lag
             feat_vec.append(float(np.clip(ivpn_window[idx], 0.0, 1.0)))
         else:
             feat_vec.append(leader_feats.get(name, 0.5))
@@ -170,12 +130,9 @@ def _predict_one_step(
     return float(np.clip(pred, 0.0, 1.0))
 
 
-# ─────────────────────────────────────────────
-#  Публичный API
-# ─────────────────────────────────────────────
 def predict_trajectory(
     current_ivpn: float,
-    history_ivpn: list[float],  # список значений из истории, newest первый
+    history_ivpn: list[float],
     leader_a: dict,
     leader_b: dict,
     atrocity_a: float = 0.5,
@@ -184,20 +141,8 @@ def predict_trajectory(
     recession_b: float = 0.7,
     debt_gdp_a: float = 1.2,
     debt_gdp_b: float = 0.4,
-    n_steps: int = 3,           # горизонт прогноза в месяцах
+    n_steps: int = 3,
 ) -> LSTMForecast:
-    """
-    Прогнозирует траекторию уровня напряжённости на n_steps месяцев вперёд.
-
-    Args:
-        current_ivpn:   текущее значение ИВПН (из UI)
-        history_ivpn:   предыдущие значения (newest first) из ivpn_history
-        leader_a/b:     профили лидеров (из LEADER_PROFILES)
-        n_steps:        горизонт прогноза (мес.)
-
-    Returns:
-        LSTMForecast с next_ivpn, delta, trajectory[n_steps]
-    """
     model_dict = _load_model()
     if model_dict is None:
         return LSTMForecast(
@@ -206,14 +151,12 @@ def predict_trajectory(
         )
 
     try:
-        window = model_dict["window"]  # 6
+        window = model_dict["window"]
 
-        # Собираем окно из 6 значений: история (oldest→newest) + current
-        all_vals = list(reversed(history_ivpn)) + [current_ivpn]  # oldest first
+        all_vals = list(reversed(history_ivpn)) + [current_ivpn]
         if len(all_vals) < window:
-            # Дополняем текущим значением
             all_vals = [current_ivpn] * (window - len(all_vals)) + all_vals
-        ivpn_window = list(all_vals[-window:])  # последние 6, oldest first
+        ivpn_window = list(all_vals[-window:])
 
         leader_feats = extract_leader_features(
             leader_a=leader_a,
@@ -226,18 +169,16 @@ def predict_trajectory(
             debt_gdp_b=debt_gdp_b,
         )
 
-        # Авторегрессионный прогноз на n_steps шагов
         trajectory = []
         window_buf = list(ivpn_window)
         for _ in range(n_steps):
             pred = _predict_one_step(model_dict, window_buf, leader_feats)
             trajectory.append(pred)
-            window_buf = window_buf[1:] + [pred]  # сдвигаем окно
+            window_buf = window_buf[1:] + [pred]
 
         next_ivpn = trajectory[0]
         delta = next_ivpn - current_ivpn
 
-        # Иконка направления
         if delta > 0.015:
             icon = "▲"
         elif delta < -0.015:
@@ -245,7 +186,6 @@ def predict_trajectory(
         else:
             icon = "→"
 
-        # Уровень уверенности по magnitude delta
         confidence = (
             "высокая" if abs(delta) > 0.04
             else "средняя" if abs(delta) > 0.015
@@ -269,7 +209,6 @@ def predict_trajectory(
 
 
 def format_trajectory_html(forecast: LSTMForecast, current_ivpn: float) -> str:
-    """Строит HTML-строку с мини-графиком из emoji и цифр."""
     if not forecast.available:
         return f'<span style="color:#64748b;font-size:.85em;">⚠️ MLP-модель недоступна: {forecast.error}</span>'
 

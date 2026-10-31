@@ -1,4 +1,3 @@
-"""Аналитическая сводка: реакция рынка на 'крупные' новости за 5 лет."""
 import logging
 from pathlib import Path
 
@@ -10,10 +9,6 @@ PROCESSED_DIR = Path("data/processed")
 
 
 def analyze_big_news(ticker: str, lookback_years: int = 5, impact_threshold_std: float = 2.0) -> dict:
-    """
-    Находит торговые дни, когда return > N sigma (крупное событие),
-    сопоставляет с новостями, строит сводку.
-    """
     candles_path = Path("data/raw") / f"candles_{ticker.replace('-','_')}.parquet"
     news_path = PROCESSED_DIR / "task_1_news.csv"
 
@@ -34,7 +29,6 @@ def analyze_big_news(ticker: str, lookback_years: int = 5, impact_threshold_std:
     big_days = df[df["log_return"].abs() > threshold].copy()
     big_days["direction"] = big_days["log_return"].apply(lambda x: "up" if x > 0 else "down")
 
-    # mean reaction windows
     windows = [1, 3, 5]
     reaction = {}
     for w in windows:
@@ -43,7 +37,6 @@ def analyze_big_news(ticker: str, lookback_years: int = 5, impact_threshold_std:
             df[["Date", f"fwd_{w}"]], on="Date", how="left"
         )[f"fwd_{w}"].mean()
 
-    # match news
     news_around = []
     if news_path.exists():
         news_df = pd.read_csv(news_path, parse_dates=["published_at"])

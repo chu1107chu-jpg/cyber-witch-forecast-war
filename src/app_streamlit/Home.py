@@ -1,4 +1,3 @@
-"""Streamlit ЛК — Home (карточки активов, прогнозы, баланс)."""
 import os
 import requests
 import streamlit as st
@@ -8,7 +7,6 @@ API = os.environ.get("BASE_URL", "http://localhost:8000") + "/api/v1"
 st.set_page_config(page_title="Предсказания", page_icon="📈", layout="wide")
 st.title("📈 Предсказания — Market Forecast")
 
-# ── Auth ─────────────────────────────────────────────────────
 token = st.session_state.get("token", "")
 if not token:
     with st.form("login"):
@@ -26,7 +24,6 @@ if not token:
 
 headers = {"Authorization": f"Bearer {token}"}
 
-# ── Balance ──────────────────────────────────────────────────
 col1, col2, col3 = st.columns(3)
 try:
     bal = requests.get(f"{API}/wallet/balance", headers=headers, timeout=5).json()
@@ -34,7 +31,6 @@ try:
 except Exception:
     col1.metric("💰 Баланс кредитов", "недоступно")
 
-# ── Tickers ──────────────────────────────────────────────────
 try:
     tickers = requests.get(f"{API}/data/tickers", timeout=5).json().get("tickers", [])
 except Exception:
@@ -42,7 +38,6 @@ except Exception:
 
 selected = col2.selectbox("Тикер", tickers)
 
-# ── Forecast ─────────────────────────────────────────────────
 st.subheader(f"Прогноз для {selected}")
 if st.button("Получить прогноз"):
     from datetime import date
@@ -63,7 +58,6 @@ if st.button("Получить прогноз"):
     except Exception as e:
         st.error(f"Ошибка: {e}")
 
-# ── Quick metrics ─────────────────────────────────────────────
 with st.expander("Метрики модели"):
     try:
         m = requests.get(f"{API}/forecast/metrics", timeout=5).json()

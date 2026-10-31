@@ -1,4 +1,3 @@
-"""Страница: Новости — фильтры, карточки с sentiment."""
 import os
 import requests
 import pandas as pd
@@ -21,7 +20,6 @@ try:
     if items:
         df = pd.DataFrame(items)
         st.metric("Найдено новостей", len(df))
-        # colorize sentiment
         def color_sent(val):
             if isinstance(val, float):
                 if val > 0.2: return "background-color: #1a4a1a; color: #7fff7f"

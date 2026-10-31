@@ -1,14 +1,3 @@
-"""
-Страница прогноза военных конфликтов.
-Методика: модель оценки вероятности эскалации на основе
-индексного подхода (Асланов, стр. 57–59).
-
-Формулы:
-  ИВПН  = Σ(wᵢ · xᵢ)                   — Индекс военно-политической напряжённости
-  P(E)  = 1 / (1 + e^{-k·(ИВПН − θ)})  — логистическая вероятность эскалации
-  T_hor = T₀ · e^{-λ·ИВПН}             — ожидаемый временной горизонт (мес.)
-  ΔΦ    = (Mₐ / Mᵦ) · (Sₐ / Sᵦ)        — баланс сил (force ratio)
-"""
 
 import math
 import sys
@@ -20,7 +9,6 @@ import plotly.express as px
 import streamlit as st
 from datetime import datetime
 
-# ─── Модули живых новостей и истории ────────────────────
 _SRC = os.path.join(os.path.dirname(__file__), "..", "src")
 if _SRC not in sys.path:
     sys.path.insert(0, _SRC)
@@ -40,10 +28,6 @@ except Exception as _e:
     _NEWS_AVAILABLE = False
     _e_msg = str(_e)
 
-# Монте-Карло доверительные интервалы и LSTM-прогноз траектории —
-# были в scripts/, но не импортировались на странице (баг: NameError
-# при рендере). Импортируем напрямую, без try/except: если эти модули
-# не грузятся, вся страница и так упадёт в общий try/except в app_local.py.
 from monte_carlo import run_monte_carlo
 from lstm_forecast import predict_trajectory, format_trajectory_html
 from market_data import (
@@ -51,7 +35,6 @@ from market_data import (
     format_polymarket, format_metaculus, market_calibration_note,
 )
 
-# Маппинг: факторы news_fetcher → ключи слайдеров страницы
 NEWS_TO_SLIDER = {
     "military_power":      "military_imbalance",
     "economic_pressure":   "economic_pressure",
@@ -60,7 +43,6 @@ NEWS_TO_SLIDER = {
     "proxy_activity":      "proxy_activity",
     "diplomatic_failure":  "diplomatic_failure",
     "elite_cohesion":      "elite_cohesion",
-    # "geopolitical_shift" — нет прямого слайдера
 }
 
 
@@ -69,21 +51,17 @@ CHART_GRID = "rgba(15, 23, 42, 0.08)"
 CHART_LINE = "rgba(15, 23, 42, 0.12)"
 
 
-# ─────────────────────────────────────────────────────────
-#  ИСТОРИЧЕСКИЕ КОНФЛИКТЫ — калибровочная база
-#  Источник: открытые данные SIPRI, ACLED, Uppsala
-# ─────────────────────────────────────────────────────────
 HISTORICAL = {
     "США — Ирак 2003": {
-        "military_imbalance": 0.95,  # подавляющее превосходство США
+        "military_imbalance": 0.95,
         "economic_pressure":   0.80,
-        "nuclear_factor":      0.05,  # у Ирака нет ЯО
+        "nuclear_factor":      0.05,
         "ideological_tension": 0.85,
         "proxy_activity":      0.70,
         "diplomatic_failure":  0.90,
         "historical_hostility":0.75,
-        "elite_cohesion":      0.30,  # внутренний раскол в Ираке
-        "р_эскалации_факт":    1.00,  # конфликт состоялся
+        "elite_cohesion":      0.30,
+        "р_эскалации_факт":    1.00,
         "flag": "🇺🇸🆚🇮🇶",
     },
     "США — Ливия 2011": {
@@ -99,27 +77,27 @@ HISTORICAL = {
         "flag": "🇺🇸🆚🇱🇾",
     },
     "США — С.Корея (кризис 2017)": {
-        "military_imbalance": 0.60,  # ядерное сдерживание выравнивает
+        "military_imbalance": 0.60,
         "economic_pressure":   0.85,
-        "nuclear_factor":      0.90,  # КНДР с ЯО
+        "nuclear_factor":      0.90,
         "ideological_tension": 0.95,
         "proxy_activity":      0.45,
         "diplomatic_failure":  0.80,
         "historical_hostility":0.88,
-        "elite_cohesion":      0.95,  # монолитный режим КНДР
-        "р_эскалации_факт":    0.00,  # не эскалировал
+        "elite_cohesion":      0.95,
+        "р_эскалации_факт":    0.00,
         "flag": "🇺🇸🆚🇰🇵",
     },
     "Израиль — Иран (удары 2024)": {
         "military_imbalance": 0.55,
         "economic_pressure":   0.75,
-        "nuclear_factor":      0.70,  # Иран близко к порогу
+        "nuclear_factor":      0.70,
         "ideological_tension": 0.92,
         "proxy_activity":      0.95,
         "diplomatic_failure":  0.85,
         "historical_hostility":0.90,
         "elite_cohesion":      0.70,
-        "р_эскалации_факт":    0.70,  # ограниченные удары
+        "р_эскалации_факт":    0.70,
         "flag": "🇮🇱🆚🇮🇷",
     },
     "Россия — Украина 2022": {
@@ -136,20 +114,15 @@ HISTORICAL = {
     },
 }
 
-# ─────────────────────────────────────────────────────────
-#  ВЕСА ФАКТОРОВ (Асланов, стр. 58, табл. 4.2)
-#  Получены экспертным МАИ + логистической регрессией
-#  на 47 конфликтах 1990–2022
-# ─────────────────────────────────────────────────────────
 WEIGHTS = {
     "military_imbalance":  0.22,
     "economic_pressure":   0.18,
-    "nuclear_factor":      0.17,   # «ядерное сдерживание» — двойственный эффект
+    "nuclear_factor":      0.17,
     "ideological_tension": 0.14,
     "proxy_activity":      0.13,
     "diplomatic_failure":  0.10,
     "historical_hostility":0.04,
-    "elite_cohesion":      0.02,   # низкая сплочённость → снижает порог
+    "elite_cohesion":      0.02,
 }
 
 FACTOR_LABELS = {
@@ -174,17 +147,13 @@ FACTOR_HINTS = {
     "elite_cohesion":      "0 — внутренний раскол / 1 — монолитные элиты, готовые к войне",
 }
 
-# Параметры логистической кривой (калиброваны на исторической базе)
-K_LOGISTIC = 8.5   # крутизна кривой
-THETA      = 0.52  # порог (ИВПН, при котором P=0.5)
-T0         = 48.0  # базовый горизонт, мес.
-LAMBDA_T   = 3.2   # скорость сжатия горизонта
-W_TP       = 0.08  # максимальный вес фактора третьей стороны
+K_LOGISTIC = 8.5
+THETA      = 0.52
+T0         = 48.0
+LAMBDA_T   = 3.2
+W_TP       = 0.08
 
 
-# ─────────────────────────────────────────────────────────
-#  ТРЕТЬИ СТРАНЫ — база для выбора
-# ─────────────────────────────────────────────────────────
 THIRD_PARTIES = {
     "🇷🇺 Россия": {
         "budget": 109, "nuclear": True,
@@ -258,10 +227,6 @@ THIRD_PARTIES = {
     },
 }
 
-# ─────────────────────────────────────────────────────────
-#  НОВОСТНОЙ КОНТЕКСТ — март 2026
-#  Зафиксированные события, влияющие на факторы
-# ─────────────────────────────────────────────────────────
 NEWS_CONTEXT = [
     {
         "date": "05.03.2026",
@@ -314,33 +279,28 @@ NEWS_CONTEXT = [
 ]
 
 
-# ─────────────────────────────────────────────────────────
-#  ПРОФИЛИ ЛИДЕРОВ / ЗЛОДЕЯНИЯ / ФИНАНСОВОЕ ДАВЛЕНИЕ
-#  Модифицируют ИВПН на -0.10 … +0.15
-# ─────────────────────────────────────────────────────────
 LEADER_PROFILES = {
     "🇺🇸 Трамп": {
         "side": "A",
         "age": 79,
-        "hawkishness": 0.87,         # идёт война с Ираном, требует «безоговорочной капитуляции»
-        "domestic_approval": 0.40,  # war rally effect — одобрение растёт в начале войны
-        "election_months": 44,       # ноябрь 2028
-        "rationality": 0.40,         # отрицает удар по школе (168 детей), обвиняет Иран в своём же ударе
+        "hawkishness": 0.87,
+        "domestic_approval": 0.40,
+        "election_months": 44,
+        "rationality": 0.40,
         "political_survival": 0.72,
-        "legacy_seeking": 0.90,     # убил Хаменеи, хочет закончить — свергнуть режим
+        "legacy_seeking": 0.90,
         "why": "Идёт война с Ираном (2026). ЦРУ выследило Хаменеи: Израиль сбросил 100+ боеприпасов на бункер. "
                "Требует «безоговорочной капитуляции». Санкционировал экстренные бомбы Израилю. "
                "Отрицает удар по школе в Минабе (168 детей) — NYT/CENTCOM указывает на США.",
     },
-    # :material/priority_high: Хаменеи убит израильским ударом (ЦРУ выследило) 4 марта 2026. Идёт война США+Израиль vs Иран.
     "🇮🇷 Иран: вакансия власти": {
         "side": "B",
-        "age": 57,                   # Моджтаба Хаменеи (сын) — основной кандидат (ТАСС 04.03)
-        "hawkishness": 0.91,         # война уже идёт: КСИР 24 атаки/сутки, Ормуз закрыт
-        "domestic_approval": 0.55,  # народ консолидируется вокруг войны, митинги против США 5 ночей подряд
+        "age": 57,
+        "hawkishness": 0.91,
+        "domestic_approval": 0.55,
         "election_months": 0,
-        "rationality": 0.40,         # борьба фракций + новый лидер не закреплён = непредсказуемость
-        "political_survival": 0.85, # КСИР и Совет экспертов заинтересованы в выживании режима
+        "rationality": 0.40,
+        "political_survival": 0.85,
         "legacy_seeking": 0.55,
         "why": ":material/priority_high: Хаменеи убит израильским ударом (ЦРУ выследило, 100+ боеприпасов по бункеру, 04.03.2026). "
                "КСИР закрыл Ормузский пролив (−90% танкерного трафика). "
@@ -360,7 +320,7 @@ ATROCITY_REGISTRY = {
             {"year": 2026, "event": "ЦРУ выследило Хаменеи → Израиль убил (100+ боеприпасов)", "severity": 0.88},
             {"year": 2026, "event": "Удар по школе в Минабе: 168 детей (NYT → CENTCOM)", "severity": 0.95},
         ],
-        "score": 0.68,  # резко вырос: убийство главы государства + школа
+        "score": 0.68,
     },
     "🇮🇷 Иран": {
         "events": [
@@ -370,7 +330,7 @@ ATROCITY_REGISTRY = {
             {"year": 2024, "event": "Запуск 300+ ракет и дронов по Израилю", "severity": 0.65},
             {"year": 2026, "event": "Закрытие Ормузского пролива (−90% трафика) в ответ на вторжение", "severity": 0.60},
         ],
-        "score": 0.62,  # СНИЖЕНО: Иран не агрессор в 2026 — отвечает на убийство своего лидера
+        "score": 0.62,
     },
 }
 
@@ -378,42 +338,33 @@ FINANCIAL_STATE = {
     "🇺🇸 США": {
         "debt_gdp": 1.24,
         "budget_deficit_pct": 6.2,
-        "recession_risk": 0.35,       # война + тарифы + нефть $90+ → риск рецессии растёт
-        "war_cost_annual_b": 300,      # активная война, B-1 в Англии, авианосцы, страховки
+        "recession_risk": 0.35,
+        "war_cost_annual_b": 300,
         "lose_war_impact": "Нефть $150+. Brent уже $90, LNG +50%. Ормуз заблокирован. Рейтинг < 35%.",
     },
     "🇮🇷 Иран": {
         "debt_gdp": 0.40,
         "budget_deficit_pct": 5.5,
-        "recession_risk": 0.92,       # активные бомбардировки, нефтянка под ударом, Ормуз закрыт
+        "recession_risk": 0.92,
         "war_cost_annual_b": 28,
         "lose_war_impact": "Смена режима. Ядерные объекты уничтожены. Коллапс КСИР. Экономика −30%.",
     },
 }
 
 
-# ─────────────────────────────────────────────────────────
-#  МАРКОВ: МАТРИЦА ПЕРЕХОДОВ СОСТОЯНИЙ КОНФЛИКТА
-#  Каждая строка = из состояния i; каждый столбец = в состояние j
-#  Единица времени: 1 месяц
-#  Калибровка: ACLED/UCDP, 170+ конфликтов 1990–2025
-# ─────────────────────────────────────────────────────────
 MARKOV_STATES  = [":green[:material/circle:] Мир", ":yellow[:material/circle:] Напряжённость", ":orange[:material/circle:] Кризис", ":red[:material/circle:] Война", ":blue[:material/circle:] Заморозка"]
 MARKOV_COLORS  = ["#26c281", "#f39c12", "#e67e22", "#e74c3c", "#6c63ff"]
 
-#               Мир    Напр   Криз   Война  Зам.
 MARKOV_MATRIX = np.array([
-    [0.92,  0.07,  0.01,  0.00,  0.00],  # Мир →
-    [0.10,  0.73,  0.15,  0.02,  0.00],  # Напряжённость →
-    [0.05,  0.17,  0.58,  0.17,  0.03],  # Кризис →
-    [0.01,  0.03,  0.11,  0.71,  0.14],  # Война →
-    [0.08,  0.22,  0.19,  0.10,  0.41],  # Заморозка →
+    [0.92,  0.07,  0.01,  0.00,  0.00],
+    [0.10,  0.73,  0.15,  0.02,  0.00],
+    [0.05,  0.17,  0.58,  0.17,  0.03],
+    [0.01,  0.03,  0.11,  0.71,  0.14],
+    [0.08,  0.22,  0.19,  0.10,  0.41],
 ])
 
-# ИВПН → предполагаемое начальное состояние (правые границы)
-MARKOV_IVPN_THRESHOLDS = [0.28, 0.44, 0.64, 0.85]  # < thr[i] → состояние i
+MARKOV_IVPN_THRESHOLDS = [0.28, 0.44, 0.64, 0.85]
 
-# Исторические траектории (состояние по месяцам: 0=Мир … 4=Зам.)
 MARKOV_HISTORICAL_PATHS = {
     "🇺🇸🆚🇮🇶 Ирак 2003 (война)": {
         "states": [0, 1, 1, 2, 2, 2, 3, 3, 3, 3],
@@ -435,74 +386,49 @@ MARKOV_HISTORICAL_PATHS = {
 
 
 def markov_forward(state_idx: int, steps: int = 12) -> list:
-    """Вектор вероятностей по состояниям через t месяцев."""
     v = np.zeros(len(MARKOV_STATES))
     v[state_idx] = 1.0
     result = [v.copy()]
     for _ in range(steps):
         v = v @ MARKOV_MATRIX
         result.append(v.copy())
-    return result  # len = steps + 1, каждый элемент — array(5)
+    return result
 
 
 def ivpn_to_markov_state(ivpn: float) -> int:
-    """Предположение о текущем состоянии по значению ИВПН.
-
-    Баг: раньше при ivpn >= max(threshold) функция возвращала
-    len(MARKOV_STATES)-1 = индекс ":blue[:material/circle:] Заморозка" — то есть максимальная
-    напряжённость ошибочно классифицировалась как "заморозка", а не как
-    ":red[:material/circle:] Война". "Заморозка" — состояние, достижимое только через переходную
-    матрицу (после войны), а не напрямую по уровню ИВПН.
-    """
     for i, thr in enumerate(MARKOV_IVPN_THRESHOLDS):
         if ivpn < thr:
             return i
-    return len(MARKOV_IVPN_THRESHOLDS) - 1  # ":red[:material/circle:] Война" — макс. состояние, определяемое по ИВПН
+    return len(MARKOV_IVPN_THRESHOLDS) - 1
 
 
 def compute_ivpn(factors: dict) -> float:
-    """ИВПН = Σ(wᵢ · xᵢ)  — Индекс военно-политической напряжённости"""
     return sum(WEIGHTS[k] * factors[k] for k in WEIGHTS)
 
 
 def compute_proba(ivpn: float) -> float:
-    """P(E) = 1 / (1 + e^{-k·(ИВПН − θ)})"""
     return 1.0 / (1.0 + math.exp(-K_LOGISTIC * (ivpn - THETA)))
 
 
 def compute_horizon(ivpn: float) -> float:
-    """T_hor = T₀ · e^{-λ·ИВПН}  (мес.)"""
     return T0 * math.exp(-LAMBDA_T * ivpn)
 
 
 def compute_leader_adjustment(la: dict, lb: dict,
                                atrocity_a: float, atrocity_b: float,
                                recession_a: float, recession_b: float) -> float:
-    """
-    Корректировка ИВПН: [-0.10, +0.15]
-      + агрессивные лидеры / низкий рейтинг / выборы / злодеяния / возраст
-      - рациональные и популярные лидеры, стабильная экономика
-    """
-    # Агрессивность лидеров (ястреб = выше)
     hawk       = 0.06 * la["hawkishness"] + 0.05 * lb["hawkishness"]
-    # Низкий рейтинг → Поиск внешней победы (rally around the flag)
     approval   = 0.04 * (1 - la["domestic_approval"]) + 0.06 * (1 - lb["domestic_approval"])
-    # Выборы в течение 12 мес. → сигнал силы
     election   = 0.05 if la["election_months"] <= 12 else 0.0
-    # Возраст 70+ → мышление наследия (хочу запечатлеть себя в истории)
     age_a      = 0.03 if la["age"] >= 70 else 0.0
     age_b      = 0.04 if lb["age"] >= 80 else (0.02 if lb["age"] >= 70 else 0.0)
-    # Злодеяния → дипломатический выход закрыт (после бомбардировки школы за стол не сядут)
     atrocity   = 0.04 * atrocity_b + 0.02 * atrocity_a
-    # Рецессия + высокая цена проигрыша (Иран – смена режима) → повышает риск
     fin        = 0.03 * recession_a + 0.05 * recession_b
     total      = hawk + approval + election + age_a + age_b + atrocity + fin
-    # Центрируем (нейтральный случай ≈ 0)
     return float(np.clip(total - 0.15, -0.10, 0.15))
 
 
 def force_ratio(m_a: float, m_b: float) -> float:
-    """ΔΦ = Mₐ / Mᵦ  — соотношение сил"""
     return m_a / m_b if m_b > 0 else float("inf")
 
 
@@ -555,9 +481,6 @@ def explain_force_ratio(delta_phi: float) -> str:
     return f"Это грубое соотношение военной силы сторон. Здесь около {delta_phi:.0f}:1 — то есть одна сторона заметно мощнее другой."
 
 
-# ─────────────────────────────────────────────────────────
-#  РЕНДЕР СТРАНИЦЫ
-# ─────────────────────────────────────────────────────────
 def render_conflict_page():
     st.title(":material/swords: Прогноз военных конфликтов")
     st.caption(
@@ -565,7 +488,6 @@ def render_conflict_page():
         "Калибровка на исторической базе 1990–2025 (SIPRI/ACLED)."
     )
 
-    # ── Авто-сид истории при первом запуске ──────────────
     if _NEWS_AVAILABLE and len(load_history()) == 0:
         try:
             import importlib.util, subprocess, sys as _sys
@@ -576,7 +498,6 @@ def render_conflict_page():
         except Exception:
             pass
 
-    # ── Выбор конфликта ──────────────────────────────────
     tab_iran, tab_news_hist, tab_hist, tab_compare = st.tabs([
         "🇮🇷🆚🇺🇸 Иран / США",
         ":material/newspaper: История прогнозов",
@@ -584,13 +505,9 @@ def render_conflict_page():
         ":material/dashboard: Сравнение",
     ])
 
-    # ════════════════════════════════════════════
-    #  ТАБ 1: ИРАН — США
-    # ════════════════════════════════════════════
     with tab_iran:
         st.markdown("### Сценарный анализ: Иран 🇮🇷 vs США 🇺🇸")
 
-        # ── НОВОСТНОЙ КОНТЕКСТ ────────────────────────────
         with st.expander(":material/newspaper: Актуальные новости (март 2026) — влияют на расчёт", expanded=True):
             use_news = st.toggle("Учитывать свежие новости в прогнозе", value=True,
                                  help="Когда включено — события последних дней автоматически корректируют факторы модели.")
@@ -616,7 +533,6 @@ def render_conflict_page():
                 )
 
             st.divider()
-            # ── КНОПКА ЖИВЫХ НОВОСТЕЙ ──────────────────────────────────
             if _NEWS_AVAILABLE:
                 _btn_col, _status_col = st.columns([1, 3])
                 _fetch_clicked = _btn_col.button(
@@ -628,12 +544,10 @@ def render_conflict_page():
                     with st.spinner("Загружаю RSS ТАСС / RT / BBC / Al Jazeera / IRNA / Reuters…"):
                         try:
                             _live_events = fetch_news()
-                            _live_deltas = _aggregate_deltas(_live_events)  # храним для UI
+                            _live_deltas = _aggregate_deltas(_live_events)
                             st.session_state["_live_events"]  = _live_events
                             st.session_state["_live_deltas"]  = _live_deltas
                             st.session_state["_news_fetched"] = True
-                            # Байесовское обновление слайдеров
-                            # (prior = текущие значения слайдеров)
                             _prior_ba = {
                                 _nf: st.session_state.get(f"iran_{_sf}", 0.5)
                                 for _nf, _sf in NEWS_TO_SLIDER.items()
@@ -647,7 +561,6 @@ def render_conflict_page():
                             st.session_state["_news_fetched"] = False
                         st.rerun()
 
-                # Показываем свежие события из последней загрузки
                 if st.session_state.get("_news_fetched") and st.session_state.get("_live_events"):
                     _livev = st.session_state["_live_events"]
                     _livev_uniq = list({e.title: e for e in _livev}.values())[:9]
@@ -672,7 +585,6 @@ def render_conflict_page():
 
         st.divider()
 
-        # ── ТРЕТЬИ СТРАНЫ ────────────────────────────────
         with st.expander(":material/public: Добавь страну и посмотри возможный исход", expanded=False):
             st.caption(
                 "Выбери страны, которые могут вмешаться в конфликт. "
@@ -730,8 +642,6 @@ def render_conflict_page():
                             "interest": interest,
                         }
 
-        # ── ФАКТОРЫ + пересчёт ───────────────────────────
-        # ── ПРОФИЛИ ЛИДЕРОВ, ЗЛОДЕЯНИЯ, ФИНАНСЫ ─────────────
         leader_adj = 0.0
         with st.expander(":material/psychology: Профили лидеров, злодеяния и финансовое давление", expanded=False):
             st.caption(
@@ -822,7 +732,6 @@ def render_conflict_page():
         st.divider()
         col_sliders, col_result = st.columns([1, 1])
 
-        # Базовые значения марта 2026
         defaults = {
             "military_imbalance":   0.72,
             "economic_pressure":    0.88,
@@ -849,11 +758,9 @@ def render_conflict_page():
             if use_news and any(v != 0 for v in news_delta.values()):
                 st.caption(":red[:material/circle:] Значения автоматически скорректированы по свежим новостям.")
 
-        # ── Расчёт с учётом третьих стран ─────────────────
         us_mil  = 916.0
         ir_mil  =  6.8
 
-        # Модифицируем military_imbalance по третьим сторонам
         mil_adj = factors["military_imbalance"]
         tp_ivpn_bonus = 0.0
         tp_summary_lines = []
@@ -867,7 +774,7 @@ def render_conflict_page():
                 tp_summary_lines.append(f"**{country}** → усиливает США (+{contribution:.3f} к напряжённости)")
             elif cfg["side"] == "B (Иран)":
                 mil_adj = float(np.clip(mil_adj - 0.05 * (cfg["budget"] / us_mil), 0, 1))
-                tp_ivpn_bonus -= contribution * 0.5  # поддержка Ирана сдерживает эскалацию
+                tp_ivpn_bonus -= contribution * 0.5
                 tp_summary_lines.append(f"**{country}** → усиливает Иран ({contribution:.3f} — напряжённость сдержана)")
             else:
                 tp_summary_lines.append(f"**{country}** → нейтрал (влияния нет)")
@@ -886,7 +793,6 @@ def render_conflict_page():
             if cfg["active"] and cfg["side"] == "B (Иран)"
         ))
 
-        # ── Автосохранение снапшота после загрузки новостей ───────────
         if _NEWS_AVAILABLE and st.session_state.get("_news_fetched"):
             _live_evs = st.session_state.get("_live_events", [])
             _live_dls = st.session_state.get("_live_deltas", {})
@@ -908,19 +814,13 @@ def render_conflict_page():
             )
             if should_save(ivpn):
                 append_snapshot(_snap)
-            st.session_state["_news_fetched"] = False  # сброс флага
+            st.session_state["_news_fetched"] = False
 
-        # ── Живые рыночные сигналы (Brent/LNG/Polymarket/Metaculus) ──
-        # Баг: переменная _market нигде не считалась, но использовалась
-        # ниже → NameError. fetch_market_data никогда не бросает исключение
-        # (ошибки по каждому источнику собираются в snap.errors), поэтому
-        # вызов безопасен даже при недоступности внешних API.
         try:
             _market = fetch_market_data()
         except Exception:
             _market = None
 
-        # ── Монте-Карло доверительный интервал ──────────────────────
         _ci = run_monte_carlo(
             factors=factors_adj,
             compute_ivpn_fn=compute_ivpn,
@@ -929,7 +829,6 @@ def render_conflict_page():
             bonus=tp_ivpn_bonus,
         )
 
-        # ── MLP-прогноз траектории (LSTM/MLP) ──────────────────────
         _hist_vals = [r["ivpn"] for r in load_history()[:6]] if _NEWS_AVAILABLE else []
         _lf = predict_trajectory(
             current_ivpn=ivpn,
@@ -948,7 +847,6 @@ def render_conflict_page():
         with col_result:
             st.markdown("**Результат расчёта:**")
 
-            # Показываем дельту от третьих стран
             if tp_configs and any(cfg["active"] for cfg in tp_configs.values()):
                 p_base = compute_proba(ivpn_base)
                 delta_p = p - p_base
@@ -964,7 +862,6 @@ def render_conflict_page():
                     unsafe_allow_html=True,
                 )
 
-            # Главный показатель
             st.markdown(
                 f"""<div style="background:rgba(255,255,255,0.55);border-radius:16px;
                 padding:1.2rem;margin-bottom:1rem;text-align:center;
@@ -991,7 +888,6 @@ def render_conflict_page():
             c2.metric("Горизонт",    f"{t:.0f} мес.", help=explain_horizon(t))
             c3.metric("ΔΦ (силы)",   f"{delta_phi:.0f}:1", help=explain_force_ratio(delta_phi))
 
-            # ── Доверительный интервал (Montecarlo) ──────────────────────
             st.markdown(
                 f"""<div style="background:rgba(255,255,255,0.45);border-radius:12px;
                 padding:.6rem 1rem;margin-bottom:.6rem;font-size:.82rem;
@@ -1004,7 +900,6 @@ def render_conflict_page():
                 unsafe_allow_html=True,
             )
 
-            # ── MLP-прогноз ──────────────────────────────────────────────────
             st.markdown(
                 f"""<div style="background:rgba(255,255,255,0.45);border-radius:12px;
                 padding:.6rem 1rem;margin-bottom:.6rem;
@@ -1014,13 +909,6 @@ def render_conflict_page():
                 unsafe_allow_html=True,
             )
 
-            # ── Рыночные сигналы и прогнозы аналитиков (Polymarket/Metaculus) ──
-            # Раньше блок целиком прятался, если хоть один из источников не
-            # отвечал (частый случай — Polymarket/Metaculus периодически
-            # недоступны или закрывают конкретный рынок) — из-за этого раздел
-            # с прогнозами аналитиков/рынков выглядел так, будто пропал вовсе.
-            # Теперь показываем блок всегда, с "—" по источникам, которые
-            # сейчас недоступны.
             _pm_url = (_market.polymarket_url if _market else "") or "https://polymarket.com"
             _mc_url = (_market.metaculus_url if _market else "") or "https://metaculus.com"
             _mkt_parts = [
@@ -1043,12 +931,10 @@ def render_conflict_page():
             if _market is None:
                 st.caption(":material/wifi_off: Сейчас не удалось достучаться до внешних источников (Polymarket/Metaculus/Brent) — попробуйте обновить страницу позже.")
             else:
-                # Предупреждение при принципиальном расхождении
                 _cal_note = market_calibration_note(_market, p)
                 if _cal_note:
                     st.warning(_cal_note)
 
-            # Предупреждение о ядерном факторе
             if factors["nuclear_factor"] > 0.75:
                 st.warning(
                     ":material/warning: **Ядерный порог**: при текущем уровне обогащения (~84%) "
@@ -1059,7 +945,6 @@ def render_conflict_page():
 
         st.divider()
 
-        # ── Радарная диаграмма факторов ──
         col_radar, col_gauge = st.columns(2)
 
         with col_radar:
@@ -1127,7 +1012,6 @@ def render_conflict_page():
             )
             st.plotly_chart(fig_g, use_container_width=True)
 
-        # ── Логистическая кривая + текущая точка ──
         st.markdown('<div class="section-header">Логистическая кривая P(E) = f(уровень напряжённости)</div>',
                     unsafe_allow_html=True)
         x_range = np.linspace(0, 1, 300)
@@ -1139,7 +1023,6 @@ def render_conflict_page():
             mode="lines", name="P(E)",
             line=dict(color="#6c63ff", width=2.5),
         ))
-        # Исторические точки
         for cname, cdata in HISTORICAL.items():
             cx = compute_ivpn({k: cdata[k] for k in WEIGHTS})
             cy = cdata["р_эскалации_факт"]
@@ -1150,7 +1033,6 @@ def render_conflict_page():
                             symbol="circle"),
                 name=cname, showlegend=False,
             ))
-        # Текущая точка: Иран/США
         fig_logit.add_trace(go.Scatter(
             x=[ivpn], y=[p], mode="markers+text",
             text=["🇮🇷🆚🇺🇸"], textposition="top center",
@@ -1168,7 +1050,6 @@ def render_conflict_page():
         )
         st.plotly_chart(fig_logit, use_container_width=True)
 
-        # ── Сценарии ──
         st.divider()
         st.markdown('<div class="section-header">Сценарный анализ</div>',
                     unsafe_allow_html=True)
@@ -1212,7 +1093,6 @@ def render_conflict_page():
 
         st.dataframe(pd.DataFrame(sc_rows), use_container_width=True, hide_index=True)
 
-        # ── Экономические последствия из рыночных данных ──
         st.divider()
         st.markdown('<div class="section-header">:material/trending_down: Влияние на рынки при эскалации</div>',
                     unsafe_allow_html=True)
@@ -1233,9 +1113,6 @@ def render_conflict_page():
             "Рынок закладывает «страховую премию за Ормузский пролив» ~$8–12/барр."
         )
 
-        # ════════════════════════════════════════════
-        #  МАРКОВСКИЙ ПРОГНОЗ ТРАЕКТОРИИ КОНФЛИКТА
-        # ════════════════════════════════════════════
         st.divider()
         st.markdown(
             '<div class="section-header">:material/insights: Марковская цепь — траектория конфликта</div>',
@@ -1270,15 +1147,13 @@ def render_conflict_page():
             ]
             st.info(state_descs[markov_state_idx])
 
-        # Расчёт прогноза
         fwd = markov_forward(markov_state_idx, steps=12)
         p_war_3  = fwd[3][3]
         p_war_6  = fwd[6][3]
         p_war_12 = fwd[12][3]
-        p_deesc_12 = fwd[12][0] + fwd[12][1]  # Мир + Напряжённость
+        p_deesc_12 = fwd[12][0] + fwd[12][1]
         most_likely_12 = int(np.argmax(fwd[12]))
 
-        # Ключевые метрики
         mc1, mc2, mc3, mc4 = st.columns(4)
         mc1.metric(
             "P(война) через 3 мес.",
@@ -1301,7 +1176,6 @@ def render_conflict_page():
             help="Мир + Напряжённость.",
         )
 
-        # График: вероятности состояний по месяцам
         months_arr = list(range(13))
         fig_markov = go.Figure()
         for s_i, (sname, scolor) in enumerate(zip(MARKOV_STATES, MARKOV_COLORS)):
@@ -1325,7 +1199,6 @@ def render_conflict_page():
         )
         st.plotly_chart(fig_markov, use_container_width=True)
 
-        # Исторические параллели
         with st.expander(":material/history_edu: Исторические параллели — как завершались похожие кризисы", expanded=False):
             st.caption(
                 "Наблюдаемые траектории состояний из похожих исторических конфликтов. "
@@ -1358,7 +1231,6 @@ def render_conflict_page():
             )
             st.plotly_chart(fig_hist_paths, use_container_width=True)
 
-        # Что ещё улучшит точность прогноза
         st.markdown(
             '<div class="section-header">:material/rocket_launch: Что ещё улучшит точность прогноза</div>',
             unsafe_allow_html=True,
@@ -1395,9 +1267,6 @@ def render_conflict_page():
                 unsafe_allow_html=True,
             )
 
-    # ════════════════════════════════════════════
-    #  ТАБ 2: ХРОНИКА ИВПН
-    # ════════════════════════════════════════════
     with tab_news_hist:
         st.markdown("### :material/newspaper: История прогнозов — как менялся уровень напряжённости с новостями")
         if not _NEWS_AVAILABLE:
@@ -1453,9 +1322,6 @@ def render_conflict_page():
                     })
                 st.dataframe(pd.DataFrame(_rows_h), use_container_width=True, hide_index=True)
 
-    # ════════════════════════════════════════════
-    #  ТАБ 3: ИСТОРИЧЕСКИЕ КОНФЛИКТЫ
-    # ════════════════════════════════════════════
     with tab_hist:
         st.markdown("### Исторические конфликты — верификация модели")
         st.caption(
@@ -1484,7 +1350,6 @@ def render_conflict_page():
 
         st.divider()
 
-        # Scatter: модель vs факт
         st.markdown('<div class="section-header">Модель vs Факт</div>',
                     unsafe_allow_html=True)
         xs, ys, texts, colors_scatter = [], [], [], []
@@ -1519,7 +1384,6 @@ def render_conflict_page():
         )
         st.plotly_chart(fig_scatter, use_container_width=True)
 
-        # Точность модели
         errors = []
         for cdata in HISTORICAL.values():
             cf = {k: cdata[k] for k in WEIGHTS}
@@ -1535,9 +1399,6 @@ def render_conflict_page():
               f"{sum(1 for e in errors if e < 0.3)} / {len(errors)}",
               help="Сколько исторических кейсов модель распознала достаточно близко к реальному исходу.")
 
-    # ════════════════════════════════════════════
-    #  ТАБ 3: СРАВНЕНИЕ КОНФЛИКТОВ
-    # ════════════════════════════════════════════
     with tab_compare:
         st.markdown("### Сравнение текущих горячих точек")
 
@@ -1610,7 +1471,6 @@ def render_conflict_page():
 
         df_comp = pd.DataFrame(comp_rows).sort_values("P(E)", ascending=False)
 
-        # Bar chart
         st.caption(
             "**P(E) — вероятность военной эскалации.** "
             "Это оценка модели: например, 67% означает — из 100 похожих исторических ситуаций "
@@ -1618,7 +1478,6 @@ def render_conflict_page():
             "Чем выше %, тем острее обстановка — но это не прогноз конкретной даты войны."
         )
 
-        # Строим человекочитаемый hover
         def _hover_text(name, p, t, rl):
             pct = round(p * 100)
             if p >= 0.8:
@@ -1671,7 +1530,6 @@ def render_conflict_page():
         )
         st.plotly_chart(fig_comp, use_container_width=True)
 
-        # Таблица с расшифровкой
         df_comp["Что это значит"] = [
             "Крайне высокий риск открытой войны" if p > 0.80 else
             "Серьёзная опасность эскалации" if p > 0.65 else
@@ -1684,4 +1542,3 @@ def render_conflict_page():
         df_comp["Горизонт (мес.)"] = df_comp["Горизонт (мес.)"].map("{:.0f}".format)
         st.dataframe(df_comp, use_container_width=True, hide_index=True)
 
-    # Методика перенесена в ТЗ Предсказания 1.1/index.html#conflict-method

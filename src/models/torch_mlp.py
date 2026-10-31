@@ -1,4 +1,3 @@
-"""PyTorch MLP + упрощённый Transformer для табличных данных."""
 import logging
 from pathlib import Path
 
@@ -45,7 +44,6 @@ class MiniTransformer(nn.Module):
         self.head = nn.Linear(d_model, 1)
 
     def forward(self, x):
-        # x: (batch, features) → add seq dim
         x = x.unsqueeze(1)
         x = self.proj(x)
         x = self.encoder(x)

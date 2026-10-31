@@ -1,28 +1,3 @@
-"""
-stock_training.py
-=================
-Обучение LightGBM-модели направления акций. Один код для двух мест:
-
-  * scripts/train_lgbm.py       — запуск вручную / из GitHub Actions
-  * src/auto_retrain.py         — фоновое переобучение прямо внутри Streamlit-приложения
-                                  (не требует ни GitHub Actions, ни платных серверов:
-                                  Streamlit Cloud и так ходит за котировками в Yahoo)
-
-Методология (честная, без утечек):
-  1. Скользящий холд-аут: последние HOLDOUT_YEARS лет до сегодняшнего дня.
-     Раньше граница была зашита константой (2023-12-31), из-за чего «переобучение»
-     никогда не видело свежих данных — теперь окна считаются от сегодняшней даты.
-  2. Таргеты p5/p20 смотрят на 5/20 дней вперёд, поэтому из train выкидываются строки,
-     чьё окно метки заходит в холд-аут (purge), а в CV — ещё и embargo после
-     validation-блока (Лопес де Прадо, "Advances in Financial ML").
-  3. OOS-метрики считаются моделью, обученной ТОЛЬКО на train, с фиксированным числом
-     деревьев — без early-stopping по холд-ауту (иначе холд-аут участвует в подборе модели
-     и метрика получается завышенной).
-  4. Боевая модель дообучается на ВСЕХ данных (train + холд-аут), чтобы знать самый
-     свежий рынок. Метрики в summary относятся к честной модели из п.3.
-  5. Артефакты пишутся атомарно (временная папка -> os.replace), поэтому приложение
-     никогда не прочитает наполовину записанную модель.
-"""
 from __future__ import annotations
 
 import json
@@ -51,8 +26,8 @@ TICKERS = [
 HISTORY_YEARS = 10
 HOLDOUT_YEARS = 2
 N_CV_FOLDS = 5
-MIN_TICKERS = 8                                   # меньше — данные явно битые, не сохраняем
-HORIZONS = {"target_p5_up": 5, "target_p20_up": 20}   # дней вперёд
+MIN_TICKERS = 8
+HORIZONS = {"target_p5_up": 5, "target_p20_up": 20}
 
 LGB_PARAMS = dict(
     objective="binary", n_estimators=500, learning_rate=0.02,
@@ -63,19 +38,7 @@ LGB_PARAMS = dict(
 )
 
 
-# ─────────────────────────────────────────────
-#  Purged & embargoed K-fold
-# ─────────────────────────────────────────────
 def purged_kfold_splits(train: pd.DataFrame, label_date_col: str, n_folds: int, embargo_days: int):
-    """
-    Список (train_mask, val_mask) — numpy bool-массивы по строкам train.
-    train индексирован датами (на одну дату — много тикеров). label_date_col — дата,
-    на которую «смотрит» таргет строки.
-
-    Для каждого фолда validation — календарный блок дат; из train фолда убираются
-    (а) строки validation, (б) строки, чьё окно метки попадает в validation (purge),
-    (в) embargo_days торговых дней после validation-блока (embargo).
-    """
     dates = np.sort(train.index.unique())
     idx_dates = train.index.values
     label_dates = train[label_date_col].values
@@ -118,16 +81,8 @@ def run_purged_cv(train: pd.DataFrame, y_col: str, label_date_col: str,
     }
 
 
-# ─────────────────────────────────────────────
-#  Проверка «стало ли лучше»: доверительные интервалы и сравнение с прежней моделью
-# ─────────────────────────────────────────────
 def block_bootstrap_auc(y: np.ndarray, probas: list, months: np.ndarray,
                         n_boot: int = 300, seed: int = 0) -> dict:
-    """
-    AUC каждой модели + 95%-интервалы (и интервал разницы AUC, если моделей две).
-    Ресемплируем целыми МЕСЯЦАМИ: соседние дни и тикеры сильно коррелированы, поэтому
-    ресемплинг отдельных строк давал бы слишком узкие (самообманные) интервалы.
-    """
     from sklearn.metrics import roc_auc_score
     groups = np.unique(months)
     idx_by = {m: np.where(months == m)[0] for m in groups}
@@ -159,7 +114,6 @@ def _parse_date(text: str):
 
 
 def _champion_end(summary: dict):
-    """Дата, по которую «чемпион» видел данные при обучении."""
     if summary.get("trained_through"):
         return _parse_date(summary["trained_through"])
     tp = summary.get("train_period", "")          # старый формат: '2016-01-01 → 2023-12-31'
@@ -180,9 +134,6 @@ def _load_champion(champion_dir):
     return {"models": models, "feats": list(feats), "summary": summ, "end": _champion_end(summ)}
 
 
-# ─────────────────────────────────────────────
-#  Данные
-# ─────────────────────────────────────────────
 def _download_prices(start: str, end: str, log: Callable[[str], None]):
     import yfinance as yf
 
@@ -193,7 +144,7 @@ def _download_prices(start: str, end: str, log: Callable[[str], None]):
             if isinstance(df.columns, pd.MultiIndex):
                 df.columns = df.columns.droplevel(1)
             df = df.dropna()
-        except Exception as e:                      # сеть / лимиты Yahoo — пропускаем тикер
+        except Exception as e:
             log(f"  {t}: ошибка загрузки ({type(e).__name__})")
             continue
         if len(df) < 300:
@@ -217,23 +168,13 @@ def _build_dataset(frames, macro: pd.DataFrame) -> pd.DataFrame:
             d[y] = np.where(fwd.isna(), np.nan, (fwd > close).astype(float))
             d[f"label_date_{h}"] = df.index.to_series().shift(-h).reindex(d.index)
         d["ticker"] = t
-        built.append(d.dropna())      # последние h строк без метки отбрасываются
+        built.append(d.dropna())
     return pd.concat(built).sort_index()
 
 
-# ─────────────────────────────────────────────
-#  Основная функция
-# ─────────────────────────────────────────────
 def train_all(artifacts_dir: str | Path, *, run_cv: bool = True, n_jobs: int = -1,
               log: Callable[[str], None] = print, today: datetime | None = None,
               champion_dir: str | Path | None = None, guard: bool = True) -> dict:
-    """
-    Обучает обе модели и атомарно сохраняет артефакты в artifacts_dir. Возвращает summary.
-
-    champion_dir — папка действующей модели: новая («претендент») сравнивается с ней на одних и тех же
-    данных, которых не видела НИ ОДНА из двух. Если претендент значимо хуже (весь 95%-интервал разницы
-    AUC ниже нуля) и guard=True — артефакты не перезаписываются (summary['promoted'] = False).
-    """
     import lightgbm as lgb
     from sklearn.metrics import accuracy_score, roc_auc_score
 
@@ -373,7 +314,6 @@ def _history_entry(summary: dict) -> dict:
 
 
 def _append_history(artifacts_dir: Path, summary: dict, keep: int = 50) -> None:
-    """Журнал всех переобучений (train_history.json рядом с артефактами)."""
     artifacts_dir.mkdir(parents=True, exist_ok=True)
     path = artifacts_dir / "train_history.json"
     try:

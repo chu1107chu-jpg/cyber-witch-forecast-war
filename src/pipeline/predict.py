@@ -1,4 +1,3 @@
-"""Прогнозирование для заданных тикеров и даты (ансамбль)."""
 import logging
 from datetime import date, timedelta
 from pathlib import Path
@@ -47,7 +46,6 @@ def run_predict(predict_date: str, tickers: list[str]) -> list[TickerPred]:
 
         preds = {}
 
-        # SK baseline
         try:
             from src.models.sk_baseline import predict as sk_pred
             out = sk_pred(last)
@@ -57,7 +55,6 @@ def run_predict(predict_date: str, tickers: list[str]) -> list[TickerPred]:
         except Exception as e:
             logger.debug(f"SK: {e}")
 
-        # Torch MLP
         try:
             from src.models.torch_mlp import predict as torch_pred
             tout = torch_pred(last)
@@ -68,7 +65,6 @@ def run_predict(predict_date: str, tickers: list[str]) -> list[TickerPred]:
         except Exception as e:
             logger.debug(f"Torch: {e}")
 
-        # Ensemble: mean of available
         r1_vals  = [v for k, v in preds.items() if k.endswith("_r1")]
         R20_vals = [v for k, v in preds.items() if k.endswith("_R20")]
         p1_vals  = [v for k, v in preds.items() if k.endswith("_p1")]

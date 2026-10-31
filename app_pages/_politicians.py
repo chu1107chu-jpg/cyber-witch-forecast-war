@@ -1,13 +1,6 @@
-"""
-Страница «Политики: Битва» — Cyberpunk × Kawaii Edition
-Выбери бойцов · Назначь 3 атаки · Поставь монеты · Сразись!
-"""
 import streamlit as st
 import random
 
-# ──────────────────────────────────────────────────────────────
-#  ХАРАКТЕРИСТИКИ
-# ──────────────────────────────────────────────────────────────
 STAT_LABELS = {
     "strength":  "💪 Сила",
     "cunning":   ":material/psychology: Хитрость",
@@ -28,11 +21,7 @@ ATTACK_TYPE_LABELS = {
 
 CATEGORIES = ["🇷🇺 Россия", "🇺🇸 США", "🇺🇦 Украина", ":material/public: Мир", ":material/swords: Легенды"]
 
-# ──────────────────────────────────────────────────────────────
-#  30 ПОЛИТИКОВ
-# ──────────────────────────────────────────────────────────────
 POLITICIANS = [
-    # ═══════════════ 🇷🇺 РОССИЯ (8) ═══════════════
     {"id": "putin", "name": "Владимир Путин", "icon": "🐻", "category": "🇷🇺 Россия",
      "era": "1999–н.в.", "desc": "Тот самый. Многоходовочка — его второе имя.",
      "stats": {"strength": 7, "cunning": 10, "charisma": 8, "resources": 10, "luck": 8, "madness": 6},
@@ -122,7 +111,6 @@ POLITICIANS = [
          {"name": "Переписка с Курбским", "type": "media", "power": 60},
      ]},
 
-    # ═══════════════ 🇺🇸 США (7) ═══════════════
     {"id": "biden", "name": "Джо Байден", "icon": "😴", "category": "🇺🇸 США",
      "era": "2021–2025", "desc": "Сонный Джо. Спотыкается, но санкции вводит чётко.",
      "stats": {"strength": 3, "cunning": 5, "charisma": 6, "resources": 9, "luck": 5, "madness": 4},
@@ -201,7 +189,6 @@ POLITICIANS = [
          {"name": "Шляпный трюк", "type": "provocation", "power": 60},
      ]},
 
-    # ═══════════════ 🇺🇦 УКРАИНА (5) ═══════════════
     {"id": "zelensky", "name": "Владимир Зеленский", "icon": "🎬", "category": "🇺🇦 Украина",
      "era": "2019–н.в.", "desc": "Из КВН в президенты. Слуга народа IRL. Зелёная футболка — броня +100.",
      "stats": {"strength": 6, "cunning": 7, "charisma": 9, "resources": 5, "luck": 8, "madness": 6},
@@ -258,7 +245,6 @@ POLITICIANS = [
          {"name": "Минские переговоры", "type": "diplomatic", "power": 65},
      ]},
 
-    # ═══════════════ :material/public: МИР (4) ═══════════════
     {"id": "merkel", "name": "Ангела Меркель", "icon": "🇩🇪", "category": ":material/public: Мир",
      "era": "2005–2021", "desc": "Мутти. 16 лет тишины и стабильности. Ромбик руками — фирменный знак.",
      "stats": {"strength": 4, "cunning": 9, "charisma": 7, "resources": 9, "luck": 7, "madness": 2},
@@ -304,7 +290,6 @@ POLITICIANS = [
          {"name": "Цифровая Индия", "type": "economic", "power": 72},
      ]},
 
-    # ═══════════════ :material/swords: ЛЕГЕНДЫ (6) ═══════════════
     {"id": "churchill", "name": "Уинстон Черчилль", "icon": "🎩", "category": ":material/swords: Легенды",
      "era": "1940–1945, 1951–1955", "desc": "Кровь, пот и слёзы. Сигара, виски и V-знак. Бульдог империи.",
      "stats": {"strength": 7, "cunning": 9, "charisma": 10, "resources": 8, "luck": 8, "madness": 6},
@@ -373,9 +358,6 @@ POLITICIANS = [
      ]},
 ]
 
-# ──────────────────────────────────────────────────────────────
-#  СМЕШНЫЕ ПРИЧИНЫ ПОБЕДЫ (маркетолог одобряет)
-# ──────────────────────────────────────────────────────────────
 FUNNY_REASONS = [
     "{winner} победил, потому что {loser} отвлёкся на уведомление в Telegram",
     "{winner} загуглил «как победить {loser}» — и сработало",
@@ -409,11 +391,7 @@ FUNNY_REASONS = [
     "Разведка {winner} перехватила план {loser}. План был написан на салфетке.",
 ]
 
-# ──────────────────────────────────────────────────────────────
-#  БОЕВАЯ МОДЕЛЬ (30/70)
-# ──────────────────────────────────────────────────────────────
 def _calc_power(fighter: dict, chosen_attacks: list) -> float:
-    """Рассчитать силу бойца: сумма статов + средняя мощь выбранных атак."""
     stat_sum = sum(fighter["stats"].values())
     if chosen_attacks:
         atk_avg = sum(a["power"] for a in chosen_attacks) / len(chosen_attacks)
@@ -427,36 +405,26 @@ def evaluate_battle(
     fighter_b: dict, attacks_b: list,
     user_bet: str,
 ) -> dict:
-    """
-    Бой двух политиков.
-    user_bet = id бойца, на которого ставит пользователь.
-    70% — пользователь проигрывает, 30% — выигрывает.
-    """
     power_a = _calc_power(fighter_a, attacks_a)
     power_b = _calc_power(fighter_b, attacks_b)
     total = power_a + power_b or 1
     pct_a = round(power_a / total * 100, 1)
     pct_b = round(power_b / total * 100, 1)
 
-    # 30/70 рулетка
     roll = random.random()
     if roll < 0.30:
-        # Пользователь выигрывает ставку
         winner_id = user_bet
     else:
-        # Сервис выигрывает — противоположный боец
         winner_id = fighter_b["id"] if user_bet == fighter_a["id"] else fighter_a["id"]
 
     winner = fighter_a if winner_id == fighter_a["id"] else fighter_b
     loser = fighter_b if winner_id == fighter_a["id"] else fighter_a
     user_won = (winner_id == user_bet)
 
-    # Генерация боевого лога — 3 раунда (по 1 атаке каждого)
     rounds = []
     for i in range(3):
         atk_a = attacks_a[i] if i < len(attacks_a) else attacks_a[0]
         atk_b = attacks_b[i] if i < len(attacks_b) else attacks_b[0]
-        # Чуть рандома для красоты
         dmg_a = atk_a["power"] + random.randint(-15, 15)
         dmg_b = atk_b["power"] + random.randint(-15, 15)
         rounds.append({
@@ -465,7 +433,6 @@ def evaluate_battle(
             "round_winner": "a" if dmg_a > dmg_b else ("b" if dmg_b > dmg_a else "draw"),
         })
 
-    # Смешная причина
     reason = random.choice(FUNNY_REASONS).format(
         winner=winner["name"], loser=loser["name"], year=2025,
     )
@@ -481,9 +448,6 @@ def evaluate_battle(
     }
 
 
-# ──────────────────────────────────────────────────────────────
-#  CSS — CYBERPUNK × KAWAII
-# ──────────────────────────────────────────────────────────────
 _PAGE_CSS = '''<style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&display=swap');
 
@@ -819,7 +783,6 @@ hr{border:none;border-top:1px solid rgba(180,110,255,.15);margin:14px 0;}
 }
 </style>'''
 
-# ── Цвета статов ──
 STAT_COLORS = {
     "strength":  "#ff4466",
     "cunning":   "#b46eff",
@@ -830,12 +793,7 @@ STAT_COLORS = {
 }
 
 
-# ──────────────────────────────────────────────────────────────
-#  РЕНДЕР КАРТОЧКИ
-# ──────────────────────────────────────────────────────────────
 def _render_char_card(p: dict) -> str:
-    """HTML-карточка политика."""
-    # Статы
     stats_html = ""
     for key, label in STAT_LABELS.items():
         val = p["stats"].get(key, 0)
@@ -850,7 +808,6 @@ def _render_char_card(p: dict) -> str:
             f'</div></div></div>'
         )
 
-    # Атаки
     attacks_html = ""
     for i, atk in enumerate(p["attacks"]):
         type_label = ATTACK_TYPE_LABELS.get(atk["type"], atk["type"])
@@ -880,13 +837,9 @@ def _render_char_card(p: dict) -> str:
     )
 
 
-# ──────────────────────────────────────────────────────────────
-#  ГЛАВНАЯ СТРАНИЦА
-# ──────────────────────────────────────────────────────────────
 def render_politicians_page() -> None:
     st.markdown(_PAGE_CSS, unsafe_allow_html=True)
 
-    # ── Заголовок ──
     st.markdown(
         '<div class="pk-hero">'
         '<div class="pk-title">⚡ ПОЛИТИКИ: БИТВА ⚡</div>'
@@ -895,11 +848,9 @@ def render_politicians_page() -> None:
         unsafe_allow_html=True,
     )
 
-    # ── Инициализация монет ──
     if "coins" not in st.session_state:
         st.session_state.coins = 1000
 
-    # ── Фильтр по категории ──
     cat_filter = st.radio(
         "Фракция",
         ["Все"] + CATEGORIES,
@@ -911,7 +862,6 @@ def render_politicians_page() -> None:
     else:
         pool = [p for p in POLITICIANS if p["category"] == cat_filter]
 
-    # ── Выбор бойцов ──
     col_a, col_vs, col_b = st.columns([5, 1, 5])
 
     with col_a:
@@ -925,7 +875,6 @@ def render_politicians_page() -> None:
         fighter_a = pool[a_idx]
         st.markdown(_render_char_card(fighter_a), unsafe_allow_html=True)
 
-        # Выбор 3 атак
         atk_a_options = [
             f"{a['name']} (💥{a['power']})" for a in fighter_a["attacks"]
         ]
@@ -971,7 +920,6 @@ def render_politicians_page() -> None:
             for s in sel_atk_b if s in atk_b_options
         ]
 
-    # ── Панель ставок ──
     st.markdown("---")
     st.markdown(
         f'<div class="pk-bet-panel">'
@@ -999,7 +947,6 @@ def render_politicians_page() -> None:
         if bet_amount > st.session_state.coins:
             bet_amount = st.session_state.coins
 
-    # ── Кнопка БОЙ ──
     st.markdown("---")
     fc1, fc2, fc3 = st.columns([2, 3, 2])
     with fc2:
@@ -1010,12 +957,10 @@ def render_politicians_page() -> None:
             disabled=len(attacks_a) == 0 or len(attacks_b) == 0,
         )
 
-    # ── Результат ──
     if fight and attacks_a and attacks_b:
         bet_id = fighter_a["id"] if user_bet == fighter_a["name"] else fighter_b["id"]
         result = evaluate_battle(fighter_a, attacks_a, fighter_b, attacks_b, bet_id)
 
-        # Обновить монеты
         if result["user_won"]:
             st.session_state.coins += bet_amount
             coins_delta = f"+{bet_amount}"
@@ -1024,13 +969,12 @@ def render_politicians_page() -> None:
             coins_delta = f"-{bet_amount}"
 
         if st.session_state.coins <= 0:
-            st.session_state.coins = 100  # страховка от нуля
+            st.session_state.coins = 100
 
         winner = result["winner"]
         loser = result["loser"]
         is_a_winner = winner["id"] == fighter_a["id"]
 
-        # Классы анимации
         anim_a = "pk-winner-anim" if is_a_winner else "pk-loser-anim"
         anim_b = "pk-loser-anim" if is_a_winner else "pk-winner-anim"
         box_cls_a = "winner-stage" if is_a_winner else "loser-stage"
@@ -1038,7 +982,6 @@ def render_politicians_page() -> None:
         laurel_a = '<div class="pk-laurel">👑</div>' if is_a_winner else ""
         laurel_b = '<div class="pk-laurel">👑</div>' if not is_a_winner else ""
 
-        # Портреты с анимацией
         st.markdown(
             f'<div class="pk-stage">'
             f'<div class="pk-stage-box {box_cls_a}">'
@@ -1062,7 +1005,6 @@ def render_politicians_page() -> None:
             unsafe_allow_html=True,
         )
 
-        # Баннер победы/поражения
         if result["user_won"]:
             banner_cls = "win"
             banner_text = f"🎉 ПОБЕДА! {winner['icon']} {winner['name']} побеждает! {coins_delta} :material/toll:"
@@ -1077,7 +1019,6 @@ def render_politicians_page() -> None:
             unsafe_allow_html=True,
         )
 
-        # Полоска сравнения
         st.markdown(
             f'<div style="display:flex;justify-content:space-between;font-size:12px;'
             f'color:rgba(255,255,255,.5);margin-top:12px;">'
@@ -1090,7 +1031,6 @@ def render_politicians_page() -> None:
             unsafe_allow_html=True,
         )
 
-        # Раунды
         st.markdown('<div class="pk-section">:material/swords: Ход боя</div>', unsafe_allow_html=True)
         for i, r in enumerate(result["rounds"]):
             r_icon = ":red[:material/circle:]" if r["round_winner"] == "a" else (":blue[:material/circle:]" if r["round_winner"] == "b" else "🤝")
@@ -1105,13 +1045,11 @@ def render_politicians_page() -> None:
                 unsafe_allow_html=True,
             )
 
-        # Смешная причина
         st.markdown(
             f'<div class="pk-reason">💬 {result["reason"]}</div>',
             unsafe_allow_html=True,
         )
 
-        # Баланс
         st.markdown(
             f'<div style="text-align:center;margin-top:10px;">'
             f'<span class="pk-coins">:material/toll: Баланс: {st.session_state.coins} монет</span>'

@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-"""Upload trained model artifacts from data/artifacts/ to Cloudflare R2."""
 
 import sys
 from pathlib import Path

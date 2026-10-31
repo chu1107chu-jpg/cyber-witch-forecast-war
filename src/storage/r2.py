@@ -1,4 +1,3 @@
-"""Cloudflare R2 (S3-совместимое) — upload/presigned URL."""
 import logging
 import os
 from pathlib import Path
@@ -26,7 +25,6 @@ def _get_client():
 
 
 def upload_bytes(key: str, data: bytes, content_type: str = "application/octet-stream") -> str:
-    """Upload raw bytes → R2. Returns public URL."""
     bucket = os.environ.get("R2_BUCKET", "lichu-media")
     _get_client().put_object(
         Bucket=bucket, Key=key, Body=data,
@@ -37,7 +35,6 @@ def upload_bytes(key: str, data: bytes, content_type: str = "application/octet-s
 
 
 def upload_file(local_path: str | Path, key: str) -> str:
-    """Upload local file → R2."""
     bucket = os.environ.get("R2_BUCKET", "lichu-media")
     content_type = "application/octet-stream"
     _get_client().upload_file(str(local_path), bucket, key,
@@ -47,7 +44,6 @@ def upload_file(local_path: str | Path, key: str) -> str:
 
 
 def presigned_upload_url(key: str, expires: int = 3600) -> str:
-    """Генерирует presigned URL для загрузки из браузера."""
     bucket = os.environ.get("R2_BUCKET", "lichu-media")
     return _get_client().generate_presigned_url(
         ClientMethod="put_object",

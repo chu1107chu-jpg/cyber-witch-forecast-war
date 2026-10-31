@@ -1,4 +1,3 @@
-"""Страница: Игра guess-sign — ставка на направление цены."""
 import os
 import requests
 import streamlit as st
@@ -37,7 +36,6 @@ if st.button("Сделать ставку", type="primary"):
     except Exception as e:
         st.error(f"Ошибка: {e}")
 
-# История
 with st.expander("История игр"):
     try:
         hist = requests.get(f"{API}/games/history", headers=headers, timeout=5).json()

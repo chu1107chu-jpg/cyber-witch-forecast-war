@@ -1,17 +1,9 @@
-"""
-seed_ivpn_history.py
-====================
-Заполняет data/ivpn_history.json начальными данными
-на основе ключевых событий марта 2026 (война США+Израиль vs Иран).
-Запускать один раз: python scripts/seed_ivpn_history.py
-"""
 import sys, json
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.ivpn_history import HISTORY_FILE, _save_history
 
 SEED = [
-    # ─── Новейшие первые ────────────────────────────────────────────────────
     {
         "ts": "2026-03-08T07:00:00+00:00",
         "source": "seed",

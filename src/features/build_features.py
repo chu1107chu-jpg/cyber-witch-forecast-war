@@ -1,4 +1,3 @@
-"""Построение фич: market + news → train-ready датафрейм."""
 import argparse
 import logging
 from pathlib import Path
@@ -12,12 +11,9 @@ PROCESSED_DIR = Path("data/processed")
 PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
 
-# ── Price features ────────────────────────────────────────────
-
 def add_price_features(df: pd.DataFrame, windows: list[int] = (1, 3, 5, 10, 20, 60)) -> pd.DataFrame:
     df = df.copy().sort_values(["ticker", "Date"])
     df["log_return"] = np.log(df["Close"] / df["Close"].shift(1))
-    # targets
     df["target_r1"] = df["log_return"].shift(-1)
     df["target_R20"] = (
         df["Close"].shift(-20) / df["Close"] - 1
@@ -30,39 +26,32 @@ def add_price_features(df: pd.DataFrame, windows: list[int] = (1, 3, 5, 10, 20, 
         df[f"roll_std_{w}"]  = df["log_return"].rolling(w).std()
         df[f"vol_{w}"]       = df["Volume"].rolling(w).mean()
 
-    # RSI-14
     delta = df["log_return"]
     gain = delta.clip(lower=0).rolling(14).mean()
     loss = (-delta.clip(upper=0)).rolling(14).mean()
     df["rsi_14"] = 100 - 100 / (1 + gain / loss.replace(0, np.nan))
 
-    # MACD
     ema12 = df["Close"].ewm(span=12).mean()
     ema26 = df["Close"].ewm(span=26).mean()
     df["macd"] = ema12 - ema26
     df["macd_signal"] = df["macd"].ewm(span=9).mean()
 
-    # ATR
     high_low = df["High"] - df["Low"]
     high_close = (df["High"] - df["Close"].shift(1)).abs()
     low_close  = (df["Low"]  - df["Close"].shift(1)).abs()
     tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
     df["atr_14"] = tr.rolling(14).mean()
 
-    # Volume anomaly
     df["vol_anomaly"] = df["Volume"] / df["Volume"].rolling(20).mean()
 
     return df
 
-
-# ── News features ─────────────────────────────────────────────
 
 def add_news_features(
     price_df: pd.DataFrame,
     news_df: pd.DataFrame,
     half_life_h: float = 24.0,
 ) -> pd.DataFrame:
-    """Присоединить агрегированные новостные фичи к ценовому датафрейму."""
     if news_df.empty:
         logger.warning("News dataframe is empty, skipping news features")
         return price_df
@@ -92,7 +81,6 @@ def add_news_features(
                             "news_sent_chain_3": 0.0, "news_unique_sources": 0})
             continue
 
-        # экспоненциальное затухание
         hours_ago = (t - sub["news_date"]).dt.total_seconds() / 3600
         weights = 0.5 ** (hours_ago / half_life_h)
         sent = sub.get("sentiment_score", pd.Series(0.0, index=sub.index)).fillna(0.0)
@@ -112,8 +100,6 @@ def add_news_features(
     return price_df
 
 
-# ── Main ──────────────────────────────────────────────────────
-
 def build_features() -> pd.DataFrame:
     candles = PROCESSED_DIR.parent / "raw" / "task_1_candles.csv"
     news_path = PROCESSED_DIR / "task_1_news.csv"
@@ -124,7 +110,6 @@ def build_features() -> pd.DataFrame:
     price_df = pd.read_csv(candles)
     news_df = pd.read_csv(news_path) if news_path.exists() else pd.DataFrame()
 
-    # add NLP sentiment if available
     if not news_df.empty and "sentiment_score" not in news_df.columns:
         try:
             from src.nlp.sentiment import score_df
@@ -132,7 +117,6 @@ def build_features() -> pd.DataFrame:
         except Exception as e:
             logger.warning(f"NLP sentiment skipped: {e}")
 
-    # per-ticker features
     parts = []
     for ticker in price_df["ticker"].unique():
         sub = price_df[price_df["ticker"] == ticker].copy()
