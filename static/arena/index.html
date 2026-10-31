@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>POLITICAL ARENA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#x2694;</text></svg>">
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <span class="logo">&#x2694;&#xFE0F;</span>
+    <h1>POLITICAL<br><span class="accent">ARENA</span></h1>
+  </div>
+  <div class="header-right">
+    <button class="sound-toggle" id="soundToggle" title="Звук">&#x1F50A;</button>
+    <button class="header-btn" id="btnDaily" title="Ежедневный бонус">&#x1F381;</button>
+    <div class="wallet" id="wallet">
+      <span class="wallet-icon">&#x20B2;</span>
+      <span id="balance">100</span>
+      <span class="free-badge" id="freeBadge">3 беспл.</span>
+    </div>
+    <span class="streak-badge" id="streakBadge" style="display:none;">&#x1F525; <span id="streakCount">0</span></span>
+    <div id="userArea">
+      <div class="user-avatar-placeholder" id="btnProfile" title="Профиль">&#x1F464;</div>
+    </div>
+  </div>
+</header>
+
+<!-- 1. ВЫБОР БОЙЦОВ -->
+<section class="screen active" id="screenSelect">
+  <div class="section-title">
+    <h2>ВЫБЕРИ БОЙЦОВ</h2>
+    <p class="subtitle">Двое выходят на арену. Одним из них будешь управлять ты.</p>
+  </div>
+
+  <div class="selected-fighters">
+    <div class="selected-slot" id="slotA">
+      <div class="slot-placeholder">?</div>
+      <span>Боец 1</span>
+    </div>
+    <div class="vs-badge">VS</div>
+    <div class="selected-slot" id="slotB">
+      <div class="slot-placeholder">?</div>
+      <span>Боец 2</span>
+    </div>
+  </div>
+
+  <div class="fighter-filters">
+    <input type="search" id="fighterSearch" class="fighter-search" placeholder="Поиск бойца…" autocomplete="off">
+    <div class="type-chips" id="typeChips"></div>
+  </div>
+
+  <div class="fighters-grid" id="fightersGrid"></div>
+
+  <button class="btn-primary btn-fight" id="btnTobet" disabled>ДАЛЕЕ &#x2192; СТАВКА</button>
+</section>
+
+<!-- 2. СТАВКА -->
+<section class="screen" id="screenBet">
+  <div class="section-title">
+    <h2>СДЕЛАЙ СТАВКУ</h2>
+    <p class="subtitle">Нажми на бойца, за которого играешь: ты сам выбираешь ему удары</p>
+  </div>
+
+  <div class="bet-fighters">
+    <div class="bet-fighter-card" id="betCardA" data-side="a">
+      <div class="bet-emoji" id="betEmojiA"></div>
+      <div class="bet-name" id="betNameA"></div>
+      <div class="bet-type" id="betTypeA"></div>
+      <div class="bet-stats" id="betStatsA"></div>
+      <div class="bet-odds" id="betOddsA"></div>
+    </div>
+    <div class="vs-badge vs-big">VS</div>
+    <div class="bet-fighter-card" id="betCardB" data-side="b">
+      <div class="bet-emoji" id="betEmojiB"></div>
+      <div class="bet-name" id="betNameB"></div>
+      <div class="bet-type" id="betTypeB"></div>
+      <div class="bet-stats" id="betStatsB"></div>
+      <div class="bet-odds" id="betOddsB"></div>
+    </div>
+  </div>
+
+  <div class="matchup-bar" id="matchupBar">
+    <div class="matchup-fill" id="matchupFill"></div>
+    <span class="matchup-text" id="matchupText"></span>
+  </div>
+
+  <div class="bet-controls">
+    <div class="bet-amount-row">
+      <label>СТАВКА:</label>
+      <div class="bet-input-wrap">
+        <button class="bet-adj" id="betMinus">&minus;</button>
+        <input type="number" id="betAmount" value="10" min="0" max="100" inputmode="numeric">
+        <button class="bet-adj" id="betPlus">+</button>
+        <span class="currency">&#x20B2;</span>
+      </div>
+    </div>
+    <div class="bet-quick">
+      <button class="bet-quick-btn" data-val="0">БЕСПЛ.</button>
+      <button class="bet-quick-btn" data-val="5">5</button>
+      <button class="bet-quick-btn" data-val="10">10</button>
+      <button class="bet-quick-btn" data-val="25">25</button>
+      <button class="bet-quick-btn" data-val="50">50</button>
+      <button class="bet-quick-btn" data-val="100">МАКС</button>
+    </div>
+    <div class="bet-info">
+      <span>Выигрыш: <strong id="potentialWin">—</strong></span>
+      <span>Баланс: <strong id="betBalance">100&#x20B2;</strong></span>
+    </div>
+    <p class="bet-note" id="betNote"></p>
+  </div>
+
+  <div class="bet-actions">
+    <button class="btn-secondary" id="btnBackSelect">&larr; НАЗАД</button>
+    <button class="btn-primary btn-fight" id="btnFight" disabled>&#9876;&#65039; В БОЙ!</button>
+  </div>
+</section>
+
+<!-- 3. БОЙ -->
+<section class="screen" id="screenFight">
+  <div class="fight-arena" id="fightArena">
+    <div class="fight-header">
+      <div class="fight-fighter fight-left" id="fighterBoxA">
+        <div class="fight-emoji" id="fightEmojiA"></div>
+        <div class="fight-name" id="fightNameA"></div>
+        <div class="hp-bar"><div class="hp-fill" id="hpBarA"></div></div>
+        <div class="hp-text" id="hpTextA"></div>
+      </div>
+      <div class="fight-round" id="fightRound">РАУНД 1</div>
+      <div class="fight-fighter fight-right" id="fighterBoxB">
+        <div class="fight-emoji" id="fightEmojiB"></div>
+        <div class="fight-name" id="fightNameB"></div>
+        <div class="hp-bar"><div class="hp-fill" id="hpBarB"></div></div>
+        <div class="hp-text" id="hpTextB"></div>
+      </div>
+    </div>
+
+    <div class="fight-log" id="fightLog"></div>
+
+    <div class="move-picker" id="movePicker" style="display:none;">
+      <h3 class="move-picker-title">&#x2694;&#xFE0F; ВЫБЕРИ УДАР</h3>
+      <div class="ai-hint" id="aiHint" style="display:none;"></div>
+      <div class="moves-grid" id="movesGrid"></div>
+      <p class="rps-legend">&#x26A1; быстрый бьёт &#x2728; спец &middot; &#x2728; спец бьёт &#x1F528; тяжёлый &middot; &#x1F528; тяжёлый бьёт &#x26A1; быстрый.<br>Один тип удара подряд &mdash; комбо (+30% / +60%), но соперник читает привычки.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 4. РЕЗУЛЬТАТ -->
+<section class="screen" id="screenResult">
+  <div class="result-container">
+    <div class="result-glow" id="resultGlow"></div>
+    <div class="result-emoji" id="resultEmoji"></div>
+    <div class="result-title" id="resultTitle"></div>
+    <div class="result-winner" id="resultWinner"></div>
+    <div class="result-method" id="resultMethod"></div>
+    <div class="result-bet" id="resultBet"></div>
+    <div class="result-narration" id="resultNarration"></div>
+    <div class="result-actions">
+      <button class="btn-primary" id="btnSpin">&#x1F3B0; КОЛЕСО УДАЧИ</button>
+      <button class="btn-secondary" id="btnRematch">&#x21BA; РЕВАНШ</button>
+      <button class="btn-secondary" id="btnPlayAgain">&#127918; СМЕНИТЬ БОЙЦОВ</button>
+    </div>
+  </div>
+</section>
+
+<!-- 5. КОЛЕСО -->
+<section class="screen" id="screenSpin">
+  <div class="spin-container">
+    <h2 class="spin-title">&#x1F3B0; КОЛЕСО УДАЧИ</h2>
+    <p class="spin-subtitle" id="spinSubtitle">Умножь свой выигрыш — или потеряй часть</p>
+    <div class="wheel-wrapper">
+      <div class="wheel" id="spinWheel"></div>
+      <div class="wheel-pointer">&#x25BC;</div>
+    </div>
+    <div class="spin-result" id="spinResult" style="display:none;">
+      <div class="spin-mult" id="spinMult"></div>
+      <div class="spin-payout" id="spinPayout"></div>
+    </div>
+    <button class="btn-primary" id="btnDoSpin">КРУТИТЬ</button>
+    <button class="btn-secondary" id="btnSpinDone" style="display:none;">Продолжить &rarr;</button>
+  </div>
+</section>
+
+<p class="legal-note">Монеты &#x20B2; &mdash; игровые и виртуальные, настоящих денег в игре нет. Персонажи &mdash; пародия.</p>
+
+<!-- Модальные окна -->
+<div class="modal-overlay" id="modalDaily" style="display:none;">
+  <div class="modal">
+    <h2>&#x1F381; ЕЖЕДНЕВНЫЙ БОНУС</h2>
+    <div class="bonus-amount" id="dailyAmount">+50&#x20B2;</div>
+    <div class="day-streak" id="dailyStreak"></div>
+    <button class="btn-primary" id="btnClaimDaily">ЗАБРАТЬ</button>
+    <button class="btn-secondary" id="btnCloseDaily" style="margin-top:8px;">Закрыть</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalProfile" style="display:none;">
+  <div class="modal">
+    <h2>&#x1F464; ПРОФИЛЬ</h2>
+    <div class="profile-stats">
+      <div class="pstat"><div class="pstat-val" id="pWins">0</div><div class="pstat-label">ПОБЕД</div></div>
+      <div class="pstat"><div class="pstat-val" id="pLosses">0</div><div class="pstat-label">ПОРАЖЕНИЙ</div></div>
+      <div class="pstat"><div class="pstat-val" id="pBestStreak">0</div><div class="pstat-label">ЛУЧШАЯ СЕРИЯ</div></div>
+    </div>
+    <div class="history-title">ПОСЛЕДНИЕ БОИ</div>
+    <div class="history-list" id="historyList"></div>
+    <button class="btn-secondary" id="btnResetProgress" style="margin-top:12px;">Сбросить прогресс</button>
+    <button class="btn-secondary" id="btnCloseProfile" style="margin-top:8px;">Закрыть</button>
+  </div>
+</div>
+
+<div class="fx-layer" id="fxLayer"></div>
+
+<script src="fighters.js"></script>
+<script src="engine.js"></script>
+<script src="store.js"></script>
+<script src="audio.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

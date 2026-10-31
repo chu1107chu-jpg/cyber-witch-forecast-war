@@ -1,47 +1,79 @@
 """
-Страница «Игра» — встраивает «Политическую арену» (FastAPI-сервер в game/).
+Страница «Игра» — «Политическая арена».
 
-Streamlit Community Cloud отдаёт наружу только один порт, поэтому сервер игры
-запускается отдельно (см. render.yaml) и подключается сюда по URL.
+Игра полностью клиентская (HTML/JS без сервера): static/arena/. Бой, кошелёк и прогресс
+считаются в браузере игрока, поэтому ничего не «засыпает» и не требует отдельного хостинга.
 
-Где задаётся URL (по приоритету):
-  1. Streamlit secrets:  GAME_URL = "https://political-arena.onrender.com"
-  2. переменная окружения GAME_URL
-  3. константа DEFAULT_GAME_URL ниже
+Как встраивается: index.html собирается в одну строку (CSS и JS подставляются внутрь) и
+показывается в iframe; картинки бойцов берутся из static/arena/img/ через статическую
+раздачу Streamlit (server.enableStaticServing = true в .streamlit/config.toml).
+Такой способ работает и на старых версиях Streamlit, где HTML/JS из static/ не раздаются.
+
+Чтобы вынести игру на отдельный адрес (например Firebase Hosting) — задай GAME_URL
+в Streamlit secrets или переменной окружения: страница покажет этот адрес вместо встроенной копии.
 """
+import json
 import os
+import re
+from pathlib import Path
 
 import streamlit as st
 
-DEFAULT_GAME_URL = ""  # впиши сюда адрес после деплоя, если не хочешь использовать secrets
+ARENA_DIR = Path(__file__).resolve().parent.parent / "static" / "arena"
+STATIC_URL = "/app/static/arena/"          # где Streamlit отдаёт папку static/arena/
+FRAME_HEIGHT = 860
 
 
-def _game_url() -> str:
+def _external_url() -> str:
     try:
         url = st.secrets.get("GAME_URL", "")
     except Exception:
         url = ""
-    url = (url or os.environ.get("GAME_URL", "") or DEFAULT_GAME_URL).strip().rstrip("/")
-    # только абсолютные http(s)-адреса — защита от случайной/подставной подстановки
+    url = (url or os.environ.get("GAME_URL", "")).strip()
     return url if url.startswith(("https://", "http://")) else ""
+
+
+@st.cache_data(show_spinner=False)
+def _bundle_html() -> str:
+    """index.html + весь CSS/JS одной строкой (без обращений к static для кода)."""
+    html = (ARENA_DIR / "index.html").read_text(encoding="utf-8")
+
+    def inline_css(m: re.Match) -> str:
+        return "<style>\n" + (ARENA_DIR / m.group(1)).read_text(encoding="utf-8") + "\n</style>"
+
+    def inline_js(m: re.Match) -> str:
+        code = (ARENA_DIR / m.group(1)).read_text(encoding="utf-8").replace("</script>", "<\\/script>")
+        return "<script>\n" + code + "\n</script>"
+
+    html = re.sub(r'<link rel="stylesheet" href="((?!https?:)[^"]+\.css)">', inline_css, html)
+    html = re.sub(r'<script src="([^"]+\.js)"></script>', inline_js, html)
+    # картинки: абсолютный путь на статику Streamlit (srcdoc резолвит относительные адреса от страницы-родителя)
+    return html.replace("<head>", f"<head>\n<script>window.ARENA_BASE = {json.dumps(STATIC_URL)};</script>", 1)
 
 
 def render_game_page() -> None:
     st.markdown("## :material/sports_esports: Политическая арена")
-    url = _game_url()
+    ext = _external_url()
 
-    if not url:
-        st.info(
-            "Игра скоро появится здесь. Сервер игры ещё не подключён: "
-            "после деплоя укажите его адрес в `GAME_URL` (Streamlit → Settings → Secrets).",
-            icon=":material/construction:",
-        )
+    if ext:
+        st.link_button("Открыть на весь экран", ext, icon=":material/open_in_new:")
+        _frame(ext)
         return
 
-    st.link_button("Открыть на весь экран", url, icon=":material/open_in_new:")
-    st.caption("Если сервер «спал», первая загрузка может занять около минуты.")
-    if hasattr(st, "iframe"):          # новые версии Streamlit (components.v1.iframe устарел)
-        st.iframe(url, height=760)
+    st.markdown(
+        f'<a href="{STATIC_URL}index.html" target="_blank" style="font-size:13px;">'
+        "Открыть на весь экран ↗</a>",
+        unsafe_allow_html=True,
+    )
+    _frame(_bundle_html())
+
+
+def _frame(src: str) -> None:
+    if hasattr(st, "iframe"):                  # новые версии Streamlit
+        st.iframe(src, height=FRAME_HEIGHT)
     else:
         import streamlit.components.v1 as components
-        components.iframe(url, height=760, scrolling=True)
+        if src.startswith(("http://", "https://")):
+            components.iframe(src, height=FRAME_HEIGHT, scrolling=True)
+        else:
+            components.html(src, height=FRAME_HEIGHT, scrolling=True)

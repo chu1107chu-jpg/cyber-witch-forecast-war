@@ -2,6 +2,8 @@
 headless = true
 enableCORS = false
 enableXsrfProtection = false
+# раздаёт папку static/ по адресу /app/static/… (картинки и файлы игры «Политическая арена»)
+enableStaticServing = true
 
 [theme]
 base = "light"

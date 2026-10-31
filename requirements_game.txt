@@ -1,4 +1,0 @@
-# Зависимости только для игры «Политическая арена» (game/server.py)
-fastapi>=0.110
-uvicorn[standard]>=0.29
-pydantic>=2.5

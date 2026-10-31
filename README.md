@@ -79,3 +79,14 @@ R2_SECRET=
 
 ## Лицензия
 MIT
+
+## Игра «Political Arena»
+
+Клиентская игра без сервера: `static/arena/` (HTML/JS, 42 бойца). Бой, кошелёк и прогресс
+считаются в браузере и хранятся в `localStorage`. В приложении — раздел «Игра»
+(`app_pages/_game.py`), отдельно — `/app/static/arena/index.html`.
+
+- Движок: `static/arena/engine.js`, кошелёк: `store.js`, данные бойцов: `fighters.js`.
+- Тесты: `node --test tests/arena_engine.test.js`.
+- Чтобы вынести игру на отдельный адрес (например Firebase Hosting) — задай `GAME_URL`
+  в Streamlit secrets; папка `static/arena/` самодостаточна, это обычная статика.

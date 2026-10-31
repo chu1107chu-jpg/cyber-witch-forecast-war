@@ -58,8 +58,4 @@ htmlcov/
 *.tmp
 *.bak
 
-# Game runtime DB (SQLite) — генерируется сервером, не хранить в git
-game/arena.db
-game/arena.db-shm
-game/arena.db-wal
 __pycache__/
