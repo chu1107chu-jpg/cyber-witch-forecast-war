@@ -35,6 +35,25 @@ def _verdict_diff(diff, ci) -> str:
     return "в пределах шума"
 
 
+def headline(summary: dict) -> str:
+    m = summary.get("metrics", {})
+    t5, t20 = m.get("target_p5_up", {}), m.get("target_p20_up", {})
+    period = summary.get("oos_period") or "новых данных"
+    if "oos_auc" not in t5:
+        return "**LightGBM v2**"
+    parts = []
+    for name, t in (("5 дн.", t5), ("20 дн.", t20)):
+        auc = t.get("oos_auc")
+        if auc is None:
+            continue
+        txt = f"{name}: AUC {auc:.3f}"
+        if t.get("oos_acc") is not None and t.get("oos_acc_baseline") is not None:
+            txt += f", точность {t['oos_acc']:.1%} при «всегда одно и то же» {t['oos_acc_baseline']:.1%}"
+        parts.append(txt)
+    return (f"**LightGBM v2** · проверка на данных, которых модель не видела ({period}) · " + " · ".join(parts) +
+            " · AUC 0.5 — это монетка, ~0.52–0.55 считается хорошо для рынка")
+
+
 def render_model_quality(summary: dict, history: list, source: str) -> None:
     metrics = summary.get("metrics", {})
     trained = summary.get("trained_at", "")

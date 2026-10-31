@@ -235,10 +235,11 @@ def explain_return(r: float, horizon: str) -> str:
     )
 
 
-def explain_signal_count(count: int, total: int, horizon: str) -> str:
+def explain_signal_count(up: int, down: int, total: int, horizon: str, mean_p: float) -> str:
     return (
-        f"Из {total} инструментов модель считает, что {count} с большей вероятностью покажут рост через {horizon}. "
-        f"Это быстрый индикатор общего настроения рынка."
+        f"Сколько из {total} инструментов получили сильный сигнал через {horizon}: вероятность роста выше 55% — {up}, "
+        f"ниже 45% — {down}, остальные в серой зоне. Средняя вероятность роста по всем сейчас {mean_p:.1%}. "
+        f"Модель училась на растущем рынке и ставит чуть больше 50% почти всем, поэтому «выше 50%» сигналом не считается."
     )
 
 
@@ -446,25 +447,27 @@ if page == ":material/dashboard: Дашборд":
         df_table = pd.DataFrame(rows)
 
         # Сводные метрики
-        up1  = (df_table[H1_LABEL] > 0.5).sum()
-        up20 = (df_table[H2_LABEL] > 0.5).sum()
+        n_all = len(df_table)
+        up1, dn1 = int((df_table[H1_LABEL] > 0.55).sum()), int((df_table[H1_LABEL] < 0.45).sum())
+        up20, dn20 = int((df_table[H2_LABEL] > 0.55).sum()), int((df_table[H2_LABEL] < 0.45).sum())
+        mean1, mean20 = float(df_table[H1_LABEL].mean()), float(df_table[H2_LABEL].mean())
         best   = df_table.loc[df_table[H1_LABEL].idxmax(), "Тикер"]
         best_p = df_table[H1_LABEL].max()
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric(f":material/trending_up: Растут за {H1_DESC}", f"{up1} / {len(rows)}",
-              help=explain_signal_count(up1, len(rows), H1_DESC))
-        c2.metric(":material/trending_up: Растут за 20д", f"{up20} / {len(rows)}",
-              help=explain_signal_count(up20, len(rows), "20 дней"))
+        c1.metric(f":material/trending_up: Сильный сигнал вверх, {H1_DESC}", f"{up1} / {n_all}",
+              f"вниз: {dn1} · в среднем {mean1:.1%}", delta_color="off",
+              help=explain_signal_count(up1, dn1, n_all, H1_DESC, mean1))
+        c2.metric(":material/trending_up: Сильный сигнал вверх, 20д", f"{up20} / {n_all}",
+              f"вниз: {dn20} · в среднем {mean20:.1%}", delta_color="off",
+              help=explain_signal_count(up20, dn20, n_all, "20 дней", mean20))
         c3.metric(":material/emoji_events: Лучший сигнал", f"{best}", f"{best_p:.1%} вверх",
               help=f"Наибольшая вероятность роста среди всех инструментов. У {best} — {best_p:.0%}.")
         c4.metric(":material/calendar_month: Дата прогноза", datetime.now().strftime("%d.%m.%Y"),
               help="Дата последнего пересчёта прогнозов.")
 
         if USING_LGBM:
-            st.caption(
-                f":material/smart_toy: **LightGBM v2** · реальная точность на данных 2024–2026: "
-                f"**53.3%** (5 дней) · **56.5%** (20 дней) при уверенных сигналах >55%"
-            )
+            from app_pages._model_quality import headline
+            st.caption(":material/smart_toy: " + headline(train_summary))
         st.divider()
 
         col_l, col_r = st.columns([1, 1])
