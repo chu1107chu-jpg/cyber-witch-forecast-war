@@ -85,6 +85,8 @@
 
 <!-- 0.2 КАМПАНИЯ: КАРТА -->
 <section class="screen" id="screenMap">
+ <div class="camp-layout">
+  <div class="camp-left">
   <div class="camp-hud" id="campHud">
     <div class="hud-stat"><span>ХОД</span><b id="hudTurn">1/60</b></div>
     <div class="hud-stat"><span>КАЗНА</span><b id="hudGold">100₲</b><small id="hudNet" class="pos"></small></div>
@@ -106,8 +108,12 @@
     <div class="camp-wait" id="campWait"><span>Ходят соперники&hellip;</span></div>
   </div>
   <div class="camp-legend" id="campLegend"></div>
+  </div>
+  <div class="camp-right">
   <div class="camp-panel" id="campPanel"></div>
   <div class="camp-endturn"><button class="btn-primary btn-fight" id="btnEndTurn">ЗАВЕРШИТЬ ХОД &#x2192;</button></div>
+  </div>
+ </div>
 </section>
 
 <!-- 1. ВЫБОР БОЙЦОВ -->

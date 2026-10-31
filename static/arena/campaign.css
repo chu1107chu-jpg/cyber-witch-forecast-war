@@ -51,9 +51,9 @@
 .btn-tool:active { transform: scale(0.97); }
 
 .camp-map-wrap { position: relative; }
-.camp-map { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.camp-map { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; max-width: 640px; margin: 0 auto; }
 .tile {
-  position: relative; aspect-ratio: 1 / 1.08; border-radius: 10px; overflow: hidden; cursor: pointer;
+  position: relative; aspect-ratio: 1 / 1; border-radius: 10px; overflow: hidden; cursor: pointer;
   border: 2px solid var(--oc, #333); display: flex; align-items: center; justify-content: center;
   box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.45), 0 0 8px -1px var(--oc, transparent);
   transition: transform 0.15s, box-shadow 0.2s;
@@ -328,4 +328,15 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .sprite-inner, .tile.threat::after, .camp-wait span { animation: none; }
+}
+
+#screenMap { max-width: 1120px; }
+.camp-layout { display: block; }
+.camp-endturn { position: sticky; bottom: 8px; z-index: 15; }
+@media (min-width: 860px) {
+  .camp-layout { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(310px, 1fr); gap: 18px; align-items: start; }
+  .camp-right { position: sticky; top: 8px; }
+  .camp-map { max-width: none; }
+  .camp-panel { min-height: 260px; }
+  .camp-endturn { position: static; }
 }
