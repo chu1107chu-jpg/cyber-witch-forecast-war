@@ -216,11 +216,10 @@ def explain_return(r: float, horizon: str) -> str:
     )
 
 
-def explain_signal_count(up: int, down: int, total: int, horizon: str, mean_p: float) -> str:
+def explain_signal_count(up: int, down: int, total: int, horizon: str) -> str:
     return (
-        f"Сколько из {total} инструментов получили сильный сигнал через {horizon}: вероятность роста выше 55% — {up}, "
-        f"ниже 45% — {down}, остальные в серой зоне. Средняя вероятность роста по всем сейчас {mean_p:.1%}. "
-        f"Модель училась на растущем рынке и ставит чуть больше 50% почти всем, поэтому «выше 50%» сигналом не считается."
+        f"Из {total} инструментов модель видит заметный перевес в пользу роста через {horizon} у {up}, "
+        f"в пользу падения у {down}. По остальным явного перевеса нет. Это оценка вероятностей, а не обещание."
     )
 
 
@@ -368,7 +367,7 @@ except Exception:
 
 if page == ":material/dashboard: Дашборд":
     st.title(":material/dashboard: Рыночный дашборд")
-    st.caption("Прогнозы на основе обученных моделей. Обновляется каждые 5 минут.")
+    st.caption("Оценка вероятностей по данным рынка, обновляется каждые 5 минут. Это не обещание результата и не инвестиционный совет.")
 
     if not models_loaded:
         st.stop()
@@ -411,24 +410,20 @@ if page == ":material/dashboard: Дашборд":
         n_all = len(df_table)
         up1, dn1 = int((df_table[H1_LABEL] > 0.55).sum()), int((df_table[H1_LABEL] < 0.45).sum())
         up20, dn20 = int((df_table[H2_LABEL] > 0.55).sum()), int((df_table[H2_LABEL] < 0.45).sum())
-        mean1, mean20 = float(df_table[H1_LABEL].mean()), float(df_table[H2_LABEL].mean())
         best   = df_table.loc[df_table[H1_LABEL].idxmax(), "Тикер"]
         best_p = df_table[H1_LABEL].max()
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric(f":material/trending_up: Сильный сигнал вверх, {H1_DESC}", f"{up1} / {n_all}",
-              f"вниз: {dn1} · в среднем {mean1:.1%}", delta_color="off",
-              help=explain_signal_count(up1, dn1, n_all, H1_DESC, mean1))
-        c2.metric(":material/trending_up: Сильный сигнал вверх, 20д", f"{up20} / {n_all}",
-              f"вниз: {dn20} · в среднем {mean20:.1%}", delta_color="off",
-              help=explain_signal_count(up20, dn20, n_all, "20 дней", mean20))
-        c3.metric(":material/emoji_events: Лучший сигнал", f"{best}", f"{best_p:.1%} вверх",
+        c1.metric(f":material/trending_up: Скорее вверх, {H1_DESC}", f"{up1} из {n_all}",
+              f"скорее вниз: {dn1}", delta_color="off",
+              help=explain_signal_count(up1, dn1, n_all, H1_DESC))
+        c2.metric(":material/trending_up: Скорее вверх, 20 дней", f"{up20} из {n_all}",
+              f"скорее вниз: {dn20}", delta_color="off",
+              help=explain_signal_count(up20, dn20, n_all, "20 дней"))
+        c3.metric(":material/emoji_events: Лучший сигнал", f"{best}", f"{best_p:.0%} вверх",
               help=f"Наибольшая вероятность роста среди всех инструментов. У {best} — {best_p:.0%}.")
         c4.metric(":material/calendar_month: Дата прогноза", datetime.now().strftime("%d.%m.%Y"),
               help="Дата последнего пересчёта прогнозов.")
 
-        if USING_LGBM:
-            from app_pages._model_quality import headline
-            st.caption(":material/smart_toy: " + headline(train_summary))
         st.divider()
 
         col_l, col_r = st.columns([1, 1])
@@ -482,9 +477,9 @@ if page == ":material/dashboard: Дашборд":
         render_market_tab(TICKERS_RU, "Россия MOEX")
 
 
-    if models_loaded and USING_LGBM:
+    if models_loaded and USING_LGBM and st.query_params.get("owner") == OWNER_KEY:
         st.divider()
-        with st.expander(":material/analytics: Качество модели и история обучения", expanded=False):
+        with st.expander(":material/analytics: Качество модели и история обучения (только для владельца)", expanded=False):
             try:
                 from app_pages._model_quality import render_model_quality
                 render_model_quality(train_summary, _auto_retrain.read_history(ARTIFACTS_LGBM), train_summary.get("_source", "repo"))
@@ -529,7 +524,7 @@ elif page == ":material/search: Тикер":
                   help=explain_probability(p20, "20 дней"))
         c4.metric("Сигнал",
                   ":green[:material/circle:] РОСТ" if p5 > 0.55 else ":red[:material/circle:] СНИЖЕНИЕ" if p5 < 0.45 else ":gray[:material/circle:] НЕЙТРАЛЬНО",
-                  help="Сигнал считается надёжным только если вероятность >55% или <45%.")
+                  help="Чем дальше вероятность от середины, тем увереннее оценка. Рядом с серединой явного перевеса нет.")
     else:
         c2.metric("Прогноз", "н/д", help="По этому активу сейчас недостаточно данных для расчёта.")
 

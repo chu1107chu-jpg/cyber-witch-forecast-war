@@ -1231,42 +1231,6 @@ def render_conflict_page():
             )
             st.plotly_chart(fig_hist_paths, use_container_width=True)
 
-        st.markdown(
-            '<div class="section-header">:material/rocket_launch: Что ещё улучшит точность прогноза</div>',
-            unsafe_allow_html=True,
-        )
-        improvements = [
-            (":material/newspaper: NLP-тональность новостей",
-             "GPT/BERT-скоринг заголовков Reuters/NYT → автоматически корректирует факторы "
-             "без ручных слайдеров. +5–8% к точности (по аналогии с SentimentTrader)."),
-            (":material/trending_up: Ценовой сигнал",
-             "Нефть Brent > $90 → снижает финансовое давление на Иран. VIX > 30 → рынок "
-             "уже закладывает риск. Данные свободно доступны через Yahoo Finance."),
-            ("⏱️ Время в состоянии (усталость)",
-             "Чем дольше конфликт в 'Кризисе' без развязки, тем выше P(война ИЛИ заморозка). "
-             "Простая фича: months_in_crisis → добавить в матрицу переходов как скалярный коэффициент."),
-            (":material/satellite_alt: Спутниковые данные открытого доступа",
-             "Planet Labs / Sentinel-2 → активность на военных базах (площадь занятых стоянок). "
-             "Используется аналитиками OSINT. Коррелирует с proxy_activity на 3–6 недель вперёд."),
-            (":material/how_to_vote: UN голосования",
-             "Доля стран, проголосовавших против резолюции ООН → прокси дипломатической изоляции. "
-             "better_diplomatic_failure чем текущий слайдер."),
-            (":material/account_balance: Path dependency (история эскалаций)",
-             "Сколько раз за последние 5 лет ситуация поднималась до 'Кризиса'. "
-             "Страна с 3 предыдущими эскалациями имеет выше P(война) при том же уровне напряжённости. "
-             "Текущая модель этого НЕ учитывает — Марков частично решает через состояния."),
-        ]
-        for title, desc in improvements:
-            st.markdown(
-                f"""<div style="background:rgba(255,255,255,0.55);border-radius:14px;
-                padding:.75rem 1rem;margin-bottom:.5rem;
-                border:1px solid rgba(255,255,255,0.7);">
-                <b>{title}</b><br>
-                <span style="font-size:.83rem;color:#374151;">{desc}</span>
-                </div>""",
-                unsafe_allow_html=True,
-            )
-
     with tab_news_hist:
         st.markdown("### :material/newspaper: История прогнозов — как менялся уровень напряжённости с новостями")
         if not _NEWS_AVAILABLE:
@@ -1383,21 +1347,6 @@ def render_conflict_page():
                        showgrid=True),
         )
         st.plotly_chart(fig_scatter, use_container_width=True)
-
-        errors = []
-        for cdata in HISTORICAL.values():
-            cf = {k: cdata[k] for k in WEIGHTS}
-            cp = compute_proba(compute_ivpn(cf))
-            errors.append(abs(cp - cdata["р_эскалации_факт"]))
-        mae = sum(errors) / len(errors)
-
-        c1, c2 = st.columns(2)
-        c1.metric("MAE модели (точность)", f"{mae:.1%}",
-              "чем ниже — тем точнее",
-              help="Средняя ошибка модели на исторических примерах. Меньше число — ближе расчёт к тому, что случилось в реальности.")
-        c2.metric("Правильных классификаций",
-              f"{sum(1 for e in errors if e < 0.3)} / {len(errors)}",
-              help="Сколько исторических кейсов модель распознала достаточно близко к реальному исходу.")
 
     with tab_compare:
         st.markdown("### Сравнение текущих горячих точек")
