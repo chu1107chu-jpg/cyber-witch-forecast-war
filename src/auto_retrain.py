@@ -39,6 +39,8 @@ STATE: dict = {
     "last_error": None,
     "next_try_at": 0.0,
     "log": [],
+    "committed_dir": None,
+    "last_summary": None,
 }
 
 
@@ -91,9 +93,12 @@ def _worker() -> None:
     try:
         # импорт здесь: тяжёлые зависимости не нужны, пока обучение не стартует
         from stock_training import train_all
-        train_all(LIVE_DIR, run_cv=False, n_jobs=2, log=_log)
+        champion = pick_artifacts_dir(STATE["committed_dir"]) if STATE.get("committed_dir") else None
+        summary = train_all(LIVE_DIR, run_cv=False, n_jobs=2, log=_log, champion_dir=champion)
         STATE["last_error"] = None
-        STATE["next_try_at"] = 0.0
+        # новая модель оказалась значимо хуже — оставляем действующую и не повторяем неделю
+        STATE["next_try_at"] = 0.0 if summary.get("promoted", True) else time.time() + 7 * 86400
+        STATE["last_summary"] = {"promoted": summary.get("promoted", True), "trained_at": summary.get("trained_at")}
     except Exception as e:
         STATE["last_error"] = f"{type(e).__name__}: {e}"
         STATE["next_try_at"] = time.time() + RETRY_AFTER_ERROR_SEC
@@ -101,6 +106,21 @@ def _worker() -> None:
     finally:
         STATE["finished_at"] = time.time()
         STATE["running"] = False
+
+
+def read_history(committed_dir: Path) -> list:
+    """Журнал переобучений: из репозитория + из временной папки приложения (по дате)."""
+    out = []
+    for d in (committed_dir, LIVE_DIR):
+        try:
+            out += json.loads((Path(d) / "train_history.json").read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    seen, uniq = set(), []
+    for h in sorted(out, key=lambda e: e.get("trained_at", "")):
+        if h.get("trained_at") not in seen:
+            seen.add(h.get("trained_at")); uniq.append(h)
+    return uniq
 
 
 def start(force: bool = False) -> bool:
@@ -117,6 +137,7 @@ def start(force: bool = False) -> bool:
 
 def maybe_start(committed_dir: Path, max_age_days: float = MAX_AGE_DAYS) -> bool:
     """Запускает обучение, если модель устарела. Дёшево вызывать на каждом rerun."""
+    STATE["committed_dir"] = committed_dir
     age = model_age_days(committed_dir)
     if age is not None and age < max_age_days:
         return False

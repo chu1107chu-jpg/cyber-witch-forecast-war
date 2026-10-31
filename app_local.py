@@ -522,6 +522,17 @@ if page == ":material/dashboard: Дашборд":
 # ═══════════════════════════════════════════════
 #  СТРАНИЦА: ТИКЕР
 # ═══════════════════════════════════════════════
+
+    # ── Качество модели (для всех): откуда цифры и стало ли лучше после обучения ──
+    if models_loaded and USING_LGBM:
+        st.divider()
+        with st.expander(":material/analytics: Качество модели и история обучения", expanded=False):
+            try:
+                from app_pages._model_quality import render_model_quality
+                render_model_quality(train_summary, _auto_retrain.read_history(ARTIFACTS_LGBM), train_summary.get("_source", "repo"))
+            except Exception as _mq_err:
+                st.warning(f"Не удалось показать качество модели: {_mq_err}")
+
 elif page == ":material/search: Тикер":
     ticker = sel_ticker
     label  = TICKER_LABELS.get(ticker, ticker)

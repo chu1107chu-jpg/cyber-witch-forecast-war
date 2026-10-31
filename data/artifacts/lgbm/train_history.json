@@ -1,0 +1,26 @@
+[
+  {
+    "trained_at": "2026-03-08T01:51:06.090017",
+    "trained_through": "2023-12-31",
+    "status": "promoted",
+    "n_samples": 31317,
+    "targets": {
+      "target_p5_up": {
+        "oos_auc": 0.5069,
+        "oos_auc_ci95": null,
+        "oos_acc": null,
+        "oos_acc_baseline": null,
+        "cv_auc": 0.5199
+      },
+      "target_p20_up": {
+        "oos_auc": 0.5137,
+        "oos_auc_ci95": null,
+        "oos_acc": null,
+        "oos_acc_baseline": null,
+        "cv_auc": 0.5474
+      }
+    },
+    "vs_champion": {},
+    "note": "исходная модель из репозитория (метрики в старом формате: без доверительных интервалов)"
+  }
+]
