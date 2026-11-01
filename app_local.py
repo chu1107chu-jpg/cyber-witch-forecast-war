@@ -1,3 +1,4 @@
+import hmac
 import json
 import os
 import sys
@@ -24,7 +25,22 @@ if _SRC_DIR not in sys.path:
 from stock_features import build_features as _shared_build_features
 import auto_retrain as _auto_retrain
 
-OWNER_KEY = "liza-coin-2026"
+
+def _owner_key() -> str:
+    try:
+        key = st.secrets.get("OWNER_KEY", "")
+    except Exception:
+        key = ""
+    return str(key or os.environ.get("OWNER_KEY", ""))
+
+
+def is_owner() -> bool:
+    key = _owner_key()
+    given = st.query_params.get("owner", "")
+    if not key or not given:
+        return False
+    return hmac.compare_digest(str(given).encode(), key.encode())
+
 
 ARTIFACTS = Path(__file__).parent / "data/artifacts/sklearn"
 TICKERS_US = [
@@ -192,44 +208,6 @@ def apply_glass_chart_theme(fig, xaxis=None, yaxis=None, **extra_layout):
     return fig
 
 
-def explain_probability(p: float, horizon: str) -> str:
-    pct = round(p * 100)
-    if p >= 0.7:
-        mood = "сильный шанс роста"
-    elif p >= 0.55:
-        mood = "умеренно позитивный сигнал"
-    elif p >= 0.45:
-        mood = "неопределённая ситуация"
-    elif p >= 0.3:
-        mood = "повышенный риск снижения"
-    else:
-        mood = "высокая вероятность снижения"
-    return f"Это оценка модели: примерно {pct}% шанс, что актив будет выше через {horizon}. Простыми словами — сейчас это {mood}."
-
-
-def explain_return(r: float, horizon: str) -> str:
-    pct = r * 100
-    direction = "выше" if pct >= 0 else "ниже"
-    return (
-        f"Это не гарантия, а средняя оценка модели. Она ожидает, что цена через {horizon} будет "
-        f"примерно на {abs(pct):.2f}% {direction} текущей."
-    )
-
-
-def explain_signal_count(up: int, down: int, total: int, horizon: str) -> str:
-    return (
-        f"Из {total} инструментов модель видит заметный перевес в пользу роста через {horizon} у {up}, "
-        f"в пользу падения у {down}. По остальным явного перевеса нет. Это оценка вероятностей, а не обещание."
-    )
-
-
-def explain_price(last_close: float, delta_pct: float) -> str:
-    return (
-        f"Последняя доступная цена закрытия. Сейчас актив стоит около ${last_close:,.2f}. "
-        f"За прошлую сессию цена изменилась на {delta_pct:+.2%}."
-    )
-
-
 @st.cache_resource(show_spinner="Загружаю модели…")
 def load_models(_version: float = 0.0):
     art = _auto_retrain.pick_artifacts_dir(ARTIFACTS_LGBM) if USING_LGBM else ARTIFACTS
@@ -297,7 +275,7 @@ def predict_ticker(ticker: str, models, feature_cols, macro=None):
 
 with st.sidebar:
     st.markdown("## :material/insights: Предсказания")
-    st.caption("Рыночные прогнозы на базе ML")
+    st.caption("Рыночные сигналы")
     st.divider()
 
     page = st.radio(
@@ -307,7 +285,7 @@ with st.sidebar:
     )
     st.divider()
 
-    if st.query_params.get("owner") == OWNER_KEY and USING_LGBM:
+    if is_owner() and USING_LGBM:
         @st.fragment(run_every=3)
         def _model_admin():
             stt = _auto_retrain.STATE
@@ -367,7 +345,7 @@ except Exception:
 
 if page == ":material/dashboard: Дашборд":
     st.title(":material/dashboard: Рыночный дашборд")
-    st.caption("Оценка вероятностей по данным рынка, обновляется каждые 5 минут. Это не обещание результата и не инвестиционный совет.")
+    st.caption("Обновляется каждые 5 минут. Не является инвестиционным советом.")
 
     if not models_loaded:
         st.stop()
@@ -414,15 +392,11 @@ if page == ":material/dashboard: Дашборд":
         best_p = df_table[H1_LABEL].max()
         c1, c2, c3, c4 = st.columns(4)
         c1.metric(f":material/trending_up: Скорее вверх, {H1_DESC}", f"{up1} из {n_all}",
-              f"скорее вниз: {dn1}", delta_color="off",
-              help=explain_signal_count(up1, dn1, n_all, H1_DESC))
+              f"скорее вниз: {dn1}", delta_color="off")
         c2.metric(":material/trending_up: Скорее вверх, 20 дней", f"{up20} из {n_all}",
-              f"скорее вниз: {dn20}", delta_color="off",
-              help=explain_signal_count(up20, dn20, n_all, "20 дней"))
-        c3.metric(":material/emoji_events: Лучший сигнал", f"{best}", f"{best_p:.0%} вверх",
-              help=f"Наибольшая вероятность роста среди всех инструментов. У {best} — {best_p:.0%}.")
-        c4.metric(":material/calendar_month: Дата прогноза", datetime.now().strftime("%d.%m.%Y"),
-              help="Дата последнего пересчёта прогнозов.")
+              f"скорее вниз: {dn20}", delta_color="off")
+        c3.metric(":material/emoji_events: Лучший сигнал", f"{best}", f"{best_p:.0%} вверх")
+        c4.metric(":material/calendar_month: Дата прогноза", datetime.now().strftime("%d.%m.%Y"))
 
         st.divider()
 
@@ -477,7 +451,7 @@ if page == ":material/dashboard: Дашборд":
         render_market_tab(TICKERS_RU, "Россия MOEX")
 
 
-    if models_loaded and USING_LGBM and st.query_params.get("owner") == OWNER_KEY:
+    if models_loaded and USING_LGBM and is_owner():
         st.divider()
         with st.expander(":material/analytics: Качество модели и история обучения (только для владельца)", expanded=False):
             try:
@@ -509,24 +483,20 @@ elif page == ":material/search: Тикер":
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Цена (last close)", f"${last_close:,.2f}",
-              f"{delta_pct:+.2%} vs пред. день",
-              help=explain_price(last_close, delta_pct))
+              f"{delta_pct:+.2%} vs пред. день")
     _h1_key = "target_p5_up" if USING_LGBM else "target_p1_up"
     _h1_lbl = "5 дней"       if USING_LGBM else "1 день"
     if pred:
         p5  = pred.get(_h1_key, 0.5)
         p20 = pred.get("target_p20_up", 0.5)
         c2.metric(f"p↑ ({_h1_lbl})", f"{p5:.1%}",
-                  "бычий" if p5 > 0.55 else "медвежий" if p5 < 0.45 else "нейтрально",
-                  help=explain_probability(p5, _h1_lbl))
+                  "бычий" if p5 > 0.55 else "медвежий" if p5 < 0.45 else "нейтрально")
         c3.metric("p↑ (20 дней)", f"{p20:.1%}",
-                  "бычий" if p20 > 0.55 else "медвежий" if p20 < 0.45 else "нейтрально",
-                  help=explain_probability(p20, "20 дней"))
+                  "бычий" if p20 > 0.55 else "медвежий" if p20 < 0.45 else "нейтрально")
         c4.metric("Сигнал",
-                  ":green[:material/circle:] РОСТ" if p5 > 0.55 else ":red[:material/circle:] СНИЖЕНИЕ" if p5 < 0.45 else ":gray[:material/circle:] НЕЙТРАЛЬНО",
-                  help="Чем дальше вероятность от середины, тем увереннее оценка. Рядом с серединой явного перевеса нет.")
+                  ":green[:material/circle:] РОСТ" if p5 > 0.55 else ":red[:material/circle:] СНИЖЕНИЕ" if p5 < 0.45 else ":gray[:material/circle:] НЕЙТРАЛЬНО")
     else:
-        c2.metric("Прогноз", "н/д", help="По этому активу сейчас недостаточно данных для расчёта.")
+        c2.metric("Прогноз", "н/д")
 
     st.divider()
 
@@ -711,7 +681,7 @@ elif page == ":material/toll: Монетка":
         _sys.path.insert(0, _SRC)
     from coin_flip import record_page_view, flip_coin, get_stats
 
-    _is_owner = st.query_params.get("owner") == OWNER_KEY
+    _is_owner = is_owner()
 
     st.title(":material/toll: Монетка")
 

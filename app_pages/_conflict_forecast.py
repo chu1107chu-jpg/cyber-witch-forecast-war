@@ -28,7 +28,6 @@ except Exception as _e:
     _NEWS_AVAILABLE = False
     _e_msg = str(_e)
 
-from monte_carlo import run_monte_carlo
 from lstm_forecast import predict_trajectory, format_trajectory_html
 from market_data import (
     fetch_market_data, format_brent, format_lng,
@@ -460,33 +459,8 @@ def apply_glass_chart_theme(fig, xaxis=None, yaxis=None, **extra_layout):
     return fig
 
 
-def explain_escalation_probability(p: float) -> str:
-    pct = round(p * 100)
-    if p >= 0.8:
-        tail = "риск очень высокий, ситуация может сорваться быстро."
-    elif p >= 0.6:
-        tail = "обстановка напряжённая, серьёзный сценарий уже реален."
-    elif p >= 0.45:
-        tail = "ситуация шаткая: возможны и переговоры, и резкое ухудшение."
-    else:
-        tail = "прямую войну модель пока считает менее вероятной."
-    return f"Это не гарантия войны, а оценка риска. Сейчас модель видит около {pct}% шанса на военную эскалацию: {tail}"
-
-
-def explain_horizon(months: float) -> str:
-    return f"Это примерный срок, через который ситуация может перейти в острую фазу. Сейчас модель оценивает его примерно в {months:.0f} мес."
-
-
-def explain_force_ratio(delta_phi: float) -> str:
-    return f"Это грубое соотношение военной силы сторон. Здесь около {delta_phi:.0f}:1 — то есть одна сторона заметно мощнее другой."
-
-
 def render_conflict_page():
     st.title(":material/swords: Прогноз военных конфликтов")
-    st.caption(
-        "Индексная модель эскалации. Методика: Асланов, гл. 4, стр. 57–59. "
-        "Калибровка на исторической базе 1990–2025 (SIPRI/ACLED)."
-    )
 
     if _NEWS_AVAILABLE and len(load_history()) == 0:
         try:
@@ -508,9 +482,8 @@ def render_conflict_page():
     with tab_iran:
         st.markdown("### Сценарный анализ: Иран 🇮🇷 vs США 🇺🇸")
 
-        with st.expander(":material/newspaper: Актуальные новости (март 2026) — влияют на расчёт", expanded=True):
-            use_news = st.toggle("Учитывать свежие новости в прогнозе", value=True,
-                                 help="Когда включено — события последних дней автоматически корректируют факторы модели.")
+        with st.expander(":material/newspaper: Актуальные новости (март 2026)", expanded=True):
+            use_news = st.toggle("Учитывать свежие новости в прогнозе", value=True)
             news_delta = {k: 0.0 for k in WEIGHTS}
             if use_news:
                 for n in NEWS_CONTEXT:
@@ -537,8 +510,7 @@ def render_conflict_page():
                 _btn_col, _status_col = st.columns([1, 3])
                 _fetch_clicked = _btn_col.button(
                     ":material/refresh: Анализ новых новостей",
-                    type="primary",
-                    help="Загружает RSS ТАСС, RT, BBC — фильтрует иранскую тему и пересчитывает уровень напряжённости по свежим событиям",
+                    type="primary"
                 )
                 if _fetch_clicked:
                     with st.spinner("Загружаю RSS ТАСС / RT / BBC / Al Jazeera / IRNA / Reuters…"):
@@ -586,17 +558,13 @@ def render_conflict_page():
         st.divider()
 
         with st.expander(":material/public: Добавь страну и посмотри возможный исход", expanded=False):
-            st.caption(
-                "Выбери страны, которые могут вмешаться в конфликт. "
-                "Модель пересчитает шанс эскалации с учётом их военной мощи и интересов."
-            )
+            st.caption("Выбери страны, которые могут вмешаться в конфликт.")
 
             selected_countries = st.multiselect(
                 "Выбери заинтересованные страны (до 3-х):",
                 list(THIRD_PARTIES.keys()),
                 default=["🇷🇺 Россия", "🇮🇱 Израиль"],
                 max_selections=3,
-                help="Каждая страна влияет на баланс сил и итоговую вероятность эскалации.",
             )
 
             tp_configs = {}
@@ -644,10 +612,6 @@ def render_conflict_page():
 
         leader_adj = 0.0
         with st.expander(":material/psychology: Профили лидеров, злодеяния и финансовое давление", expanded=False):
-            st.caption(
-                "Возраст, агрессивность, рейтинг, злодеяния и финансы изменяют уровень напряжённости на -0.10 … +0.15."
-            )
-
             col_la, col_lb = st.columns(2)
             ldr_vals = {}
             for _col, _lk in [(col_la, "🇺🇸 Трамп"), (col_lb, "🇮🇷 Иран: вакансия власти")]:
@@ -821,14 +785,6 @@ def render_conflict_page():
         except Exception:
             _market = None
 
-        _ci = run_monte_carlo(
-            factors=factors_adj,
-            compute_ivpn_fn=compute_ivpn,
-            compute_proba_fn=compute_proba,
-            leader_adj=leader_adj,
-            bonus=tp_ivpn_bonus,
-        )
-
         _hist_vals = [r["ivpn"] for r in load_history()[:6]] if _NEWS_AVAILABLE else []
         _lf = predict_trajectory(
             current_ivpn=ivpn,
@@ -883,22 +839,10 @@ def render_conflict_page():
             )
 
             c1, c2, c3 = st.columns(3)
-            c1.metric("Уровень напряжённости", f"{ivpn:.3f}",
-                      help=f"Сводная оценка напряжённости. Чем выше число, тем ближе ситуация к опасной черте.\n90% CI: {_ci.format_ivpn()}")
-            c2.metric("Горизонт",    f"{t:.0f} мес.", help=explain_horizon(t))
-            c3.metric("ΔΦ (силы)",   f"{delta_phi:.0f}:1", help=explain_force_ratio(delta_phi))
+            c1.metric("Уровень напряжённости", f"{ivpn:.3f}")
+            c2.metric("Горизонт",    f"{t:.0f} мес.")
+            c3.metric("ΔΦ (силы)",   f"{delta_phi:.0f}:1")
 
-            st.markdown(
-                f"""<div style="background:rgba(255,255,255,0.45);border-radius:12px;
-                padding:.6rem 1rem;margin-bottom:.6rem;font-size:.82rem;
-                border:1px solid rgba(255,255,255,0.65);">
-                <b>:material/casino: Доверительный интервал (Monte Carlo, n=500)</b><br>
-                <span style="color:#64748b;">
-                P(эскалация): <b>{_ci.format_pe()}</b> &nbsp;·&nbsp;
-                Напряжённость: <b>{_ci.format_ivpn()}</b>
-                </span></div>""",
-                unsafe_allow_html=True,
-            )
 
             st.markdown(
                 f"""<div style="background:rgba(255,255,255,0.45);border-radius:12px;
@@ -1115,15 +1059,9 @@ def render_conflict_page():
 
         st.divider()
         st.markdown(
-            '<div class="section-header">:material/insights: Марковская цепь — траектория конфликта</div>',
+            '<div class="section-header">:material/insights: Траектория конфликта</div>',
             unsafe_allow_html=True,
         )
-        st.caption(
-            "Марковская цепь моделирует *переходы между состояниями* конфликта. "
-            "В отличие от P(E)-снимка, она учитывает откуда мы пришли и показывает "
-            "вероятность каждого состояния через 3 / 6 / 12 месяцев."
-        )
-
         col_mstate, col_mhint = st.columns([1, 2])
         with col_mstate:
             suggested_s = ivpn_to_markov_state(ivpn)
@@ -1158,7 +1096,6 @@ def render_conflict_page():
         mc1.metric(
             "P(война) через 3 мес.",
             f"{p_war_3:.1%}",
-            help="Вероятность перехода в состояние 'Горячая война' через 3 месяца.",
         )
         mc2.metric(
             "P(война) через 6 мес.",
@@ -1173,7 +1110,6 @@ def render_conflict_page():
         mc4.metric(
             "P(деэскалация) через 12 мес.",
             f"{p_deesc_12:.1%}",
-            help="Мир + Напряжённость.",
         )
 
         months_arr = list(range(13))
@@ -1287,12 +1223,7 @@ def render_conflict_page():
                 st.dataframe(pd.DataFrame(_rows_h), use_container_width=True, hide_index=True)
 
     with tab_hist:
-        st.markdown("### Исторические конфликты — верификация модели")
-        st.caption(
-            "Модель калибрована на 5 ключевых кейсах. "
-            "Сравниваем расчётное P(E) с фактическим исходом."
-        )
-
+        st.markdown("### Исторические конфликты")
         rows = []
         for cname, cdata in HISTORICAL.items():
             cf = {k: cdata[k] for k in WEIGHTS}
@@ -1300,13 +1231,11 @@ def render_conflict_page():
             cp    = compute_proba(civpn)
             ct    = compute_horizon(civpn)
             actual = cdata["р_эскалации_факт"]
-            error  = abs(cp - actual)
             rows.append({
                 "Конфликт": f"{cdata['flag']} {cname}",
                 "Ур. напряжённости": round(civpn, 3),
-                "P(E) модель": f"{cp:.1%}",
+                "P(E)": f"{cp:.1%}",
                 "Факт": ":material/check_circle: эскалация" if actual >= 0.5 else ":material/check_circle: сдерживание",
-                "Ошибка |ΔP|": f"{error:.1%}",
             })
 
         df_hist = pd.DataFrame(rows)
@@ -1314,7 +1243,7 @@ def render_conflict_page():
 
         st.divider()
 
-        st.markdown('<div class="section-header">Модель vs Факт</div>',
+        st.markdown('<div class="section-header">Оценка и факт</div>',
                     unsafe_allow_html=True)
         xs, ys, texts, colors_scatter = [], [], [], []
         for cname, cdata in HISTORICAL.items():
@@ -1330,7 +1259,7 @@ def render_conflict_page():
         fig_scatter.add_trace(go.Scatter(
             x=[0, 1], y=[0, 1],
             mode="lines", line=dict(color="white", dash="dot", width=1),
-            name="Идеальная модель", showlegend=True,
+            name="Совпадение", showlegend=True,
         ))
         fig_scatter.add_trace(go.Scatter(
             x=xs, y=ys, mode="markers+text",
@@ -1341,7 +1270,7 @@ def render_conflict_page():
         apply_glass_chart_theme(
             fig_scatter,
             height=360, margin=dict(l=0, r=0, t=10, b=0),
-            xaxis=dict(title="P(E) расчётное", tickformat=".0%", range=[0, 1.05],
+            xaxis=dict(title="P(E)", tickformat=".0%", range=[0, 1.05],
                        showgrid=True),
             yaxis=dict(title="Факт (1=эскалация, 0=сдерживание)", range=[-0.1, 1.2],
                        showgrid=True),
@@ -1420,12 +1349,7 @@ def render_conflict_page():
 
         df_comp = pd.DataFrame(comp_rows).sort_values("P(E)", ascending=False)
 
-        st.caption(
-            "**P(E) — вероятность военной эскалации.** "
-            "Это оценка модели: например, 67% означает — из 100 похожих исторических ситуаций "
-            "в 67 случаях дело доходило до открытого военного столкновения. "
-            "Чем выше %, тем острее обстановка — но это не прогноз конкретной даты войны."
-        )
+        st.caption("**P(E) — вероятность военной эскалации.**")
 
         def _hover_text(name, p, t, rl):
             pct = round(p * 100)
