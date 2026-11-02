@@ -280,7 +280,7 @@ with st.sidebar:
 
     page = st.radio(
         "Раздел",
-        [":material/dashboard: Дашборд", ":material/search: Тикер", ":material/swords: Конфликты", ":material/toll: Монетка", ":material/sports_esports: Игра", ":material/volunteer_activism: Донат"],
+        [":material/show_chart: Акции", ":material/swords: Конфликты", ":material/toll: Монетка", ":material/sports_esports: Игра", ":material/volunteer_activism: Донат"],
         label_visibility="collapsed",
     )
     st.divider()
@@ -308,18 +308,6 @@ with st.sidebar:
         _model_admin()
 
 
-    if page == ":material/search: Тикер":
-        market_filter = st.radio("Рынок", ["🇺🇸 США", "🇷🇺 Россия"], horizontal=True)
-        pool = TICKERS_US if market_filter == "🇺🇸 США" else TICKERS_RU
-        sel_ticker = st.selectbox(
-            "Тикер",
-            pool,
-            format_func=lambda t: f"{t} — {TICKER_LABELS.get(t, '')}",
-        )
-        period = st.select_slider(
-            "История", ["3mo", "6mo", "1y", "2y", "5y"], value="1y"
-        )
-
     st.caption(f"Обновлено: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
 
 
@@ -343,146 +331,26 @@ except Exception:
     macro_data = pd.DataFrame()
 
 
-if page == ":material/dashboard: Дашборд":
-    st.title(":material/dashboard: Рыночный дашборд")
-    st.caption("Обновляется каждые 5 минут. Не является инвестиционным советом.")
-
-    if not models_loaded:
-        st.stop()
-
-    tab_us, tab_ru = st.tabs(["🇺🇸 США / Крипто / Индексы", "🇷🇺 Россия (MOEX)"])
-
-    H1_KEY  = "target_p5_up"  if USING_LGBM else "target_p1_up"
-    H2_KEY  = "target_p20_up"
-    H1_LABEL = "p↑(5д)"  if USING_LGBM else "p↑(1д)"
-    H2_LABEL = "p↑(20д)"
-    H1_DESC  = "5 дней" if USING_LGBM else "1 день"
-
-    def run_forecasts(ticker_list, label):
-        rows = []
-        prog = st.progress(0, text=f"Загружаю {label}…")
-        for i, ticker in enumerate(ticker_list):
-            prog.progress((i + 1) / len(ticker_list), text=f"↓ {ticker}")
-            try:
-                pred, _ = predict_ticker(ticker, models, feature_cols, macro_data)
-                if pred:
-                    rows.append({
-                        "Тикер":    ticker,
-                        "Название": TICKER_LABELS.get(ticker, ticker),
-                        H1_LABEL:   pred.get(H1_KEY,  0.5),
-                        H2_LABEL:   pred.get(H2_KEY,  0.5),
-                    })
-            except Exception:
-                pass
-        prog.empty()
-        return rows
-
-    def render_market_tab(ticker_list, label):
-        with st.spinner(f"Считаю прогнозы — {label}…"):
-            rows = run_forecasts(ticker_list, label)
-        if not rows:
-            st.warning("Нет данных. Проверьте интернет.")
-            return
-        df_table = pd.DataFrame(rows)
-
-        n_all = len(df_table)
-        up1, dn1 = int((df_table[H1_LABEL] > 0.55).sum()), int((df_table[H1_LABEL] < 0.45).sum())
-        up20, dn20 = int((df_table[H2_LABEL] > 0.55).sum()), int((df_table[H2_LABEL] < 0.45).sum())
-        best   = df_table.loc[df_table[H1_LABEL].idxmax(), "Тикер"]
-        best_p = df_table[H1_LABEL].max()
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric(f":material/trending_up: Скорее вверх, {H1_DESC}", f"{up1} из {n_all}",
-              f"скорее вниз: {dn1}", delta_color="off")
-        c2.metric(":material/trending_up: Скорее вверх, 20 дней", f"{up20} из {n_all}",
-              f"скорее вниз: {dn20}", delta_color="off")
-        c3.metric(":material/emoji_events: Лучший сигнал", f"{best}", f"{best_p:.0%} вверх")
-        c4.metric(":material/calendar_month: Дата прогноза", datetime.now().strftime("%d.%m.%Y"))
-
-        st.divider()
-
-        col_l, col_r = st.columns([1, 1])
-        with col_l:
-            st.markdown(f'<div class="section-header">Прогноз роста ({H1_DESC})</div>', unsafe_allow_html=True)
-            df_sorted = df_table.sort_values(H1_LABEL, ascending=True)
-            colors = ["#26c281" if p > 0.5 else "#e74c3c" for p in df_sorted[H1_LABEL]]
-            fig_bar = go.Figure(go.Bar(
-                x=df_sorted[H1_LABEL], y=df_sorted["Тикер"],
-                orientation="h", marker_color=colors,
-                text=[f"{p:.1%}" for p in df_sorted[H1_LABEL]], textposition="outside",
-            ))
-            fig_bar.add_vline(x=0.5, line_dash="dot", line_color="#64748b", opacity=0.5)
-            apply_glass_chart_theme(
-                fig_bar,
-                height=max(300, len(rows) * 28),
-                margin=dict(l=10, r=50, t=10, b=10),
-                xaxis=dict(tickformat=".0%", range=[0, 1]),
-                yaxis=dict(showgrid=False), showlegend=False,
-            )
-            st.plotly_chart(fig_bar, use_container_width=True)
-
-        with col_r:
-            st.markdown('<div class="section-header">Прогноз роста (20 дней)</div>', unsafe_allow_html=True)
-            df_r20 = df_table.sort_values(H2_LABEL, ascending=True)
-            colors20 = ["#26c281" if p > 0.5 else "#e74c3c" for p in df_r20[H2_LABEL]]
-            fig_r20 = go.Figure(go.Bar(
-                x=df_r20[H2_LABEL], y=df_r20["Тикер"],
-                orientation="h", marker_color=colors20,
-                text=[f"{p:.1%}" for p in df_r20[H2_LABEL]], textposition="outside",
-            ))
-            fig_r20.add_vline(x=0.5, line_dash="dot", line_color="#64748b", opacity=0.5)
-            apply_glass_chart_theme(
-                fig_r20,
-                height=max(300, len(rows) * 28),
-                margin=dict(l=10, r=60, t=10, b=10),
-                xaxis=dict(tickformat=".0%", range=[0, 1]),
-                yaxis=dict(showgrid=False), showlegend=False,
-            )
-            st.plotly_chart(fig_r20, use_container_width=True)
-
-        st.markdown('<div class="section-header">Все прогнозы</div>', unsafe_allow_html=True)
-        display = df_table.copy()
-        display[H1_LABEL] = display[H1_LABEL].map("{:.1%}".format)
-        display[H2_LABEL] = display[H2_LABEL].map("{:.1%}".format)
-        st.dataframe(display, use_container_width=True, hide_index=True)
-
-    with tab_us:
-        render_market_tab(TICKERS_US, "США / Крипто")
-    with tab_ru:
-        render_market_tab(TICKERS_RU, "Россия MOEX")
-
-
-    if models_loaded and USING_LGBM and is_owner():
-        st.divider()
-        with st.expander(":material/analytics: Качество модели и история обучения (только для владельца)", expanded=False):
-            try:
-                from app_pages._model_quality import render_model_quality
-                render_model_quality(train_summary, _auto_retrain.read_history(ARTIFACTS_LGBM), train_summary.get("_source", "repo"))
-            except Exception as _mq_err:
-                st.warning(f"Не удалось показать качество модели: {_mq_err}")
-
-elif page == ":material/search: Тикер":
-    ticker = sel_ticker
+def render_ticker_detail(ticker, period):
     label  = TICKER_LABELS.get(ticker, ticker)
-    st.title(f":material/search: {ticker} — {label}")
-
-    if not models_loaded:
-        st.stop()
+    st.markdown(f"### {ticker} — {label}")
 
     with st.spinner(f"Загружаю {ticker}…"):
         pred, df_raw = predict_ticker(ticker, models, feature_cols, macro_data)
 
     if df_raw.empty:
         st.error("Нет данных по тикеру.")
-        st.stop()
+        return
 
     last_row  = df_raw.iloc[-1]
     prev_row  = df_raw.iloc[-2]
     last_close = float(last_row["Close"])
     prev_close = float(prev_row["Close"])
     delta_pct  = (last_close - prev_close) / prev_close
+    cur = "₽" if ticker.endswith(".ME") else "$"
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Цена (last close)", f"${last_close:,.2f}",
+    c1.metric("Цена закрытия", f"{cur}{last_close:,.2f}",
               f"{delta_pct:+.2%} vs пред. день")
     _h1_key = "target_p5_up" if USING_LGBM else "target_p1_up"
     _h1_lbl = "5 дней"       if USING_LGBM else "1 день"
@@ -643,8 +511,8 @@ elif page == ":material/search: Тикер":
                 st.markdown(f"""
 | Метрика | Значение | Проекция цены |
 |---------|----------|--------------|
-| **r¹ (1 день)** | `{pred['target_r1']:+.4f}` | `${proj_1d:,.2f}` |
-| **R²⁰ (20 дней)** | `{pred['target_R20']:+.4f}` | `${proj_20d:,.2f}` |
+| **r¹ (1 день)** | `{pred['target_r1']:+.4f}` | `{cur}{proj_1d:,.2f}` |
+| **R²⁰ (20 дней)** | `{pred['target_R20']:+.4f}` | `{cur}{proj_20d:,.2f}` |
 | **p↑ (t+1)** | `{p_h1:.1%}` | {":green[:material/circle:] Рост" if p_h1 > 0.5 else ":red[:material/circle:] Падение"} |
 | **p↑ (t+20)** | `{p_h20:.1%}` | {":green[:material/circle:] Рост" if p_h20 > 0.5 else ":red[:material/circle:] Падение"} |
 """)
@@ -658,6 +526,150 @@ elif page == ":material/search: Тикер":
                 f'Сигнал: {signal_text}</span></div>',
                 unsafe_allow_html=True,
             )
+
+
+if page == ":material/show_chart: Акции":
+    st.title(":material/show_chart: Акции")
+    st.caption("Обновляется каждые 5 минут. Не является инвестиционным советом.")
+
+    if not models_loaded:
+        st.stop()
+
+    tab_us, tab_ru = st.tabs(["🇺🇸 США / Крипто / Индексы", "🇷🇺 Россия (MOEX)"])
+
+    H1_KEY  = "target_p5_up"  if USING_LGBM else "target_p1_up"
+    H2_KEY  = "target_p20_up"
+    H1_LABEL = "p↑(5д)"  if USING_LGBM else "p↑(1д)"
+    H2_LABEL = "p↑(20д)"
+    H1_DESC  = "5 дней" if USING_LGBM else "1 день"
+
+    def run_forecasts(ticker_list, label):
+        rows = []
+        prog = st.progress(0, text=f"Загружаю {label}…")
+        for i, ticker in enumerate(ticker_list):
+            prog.progress((i + 1) / len(ticker_list), text=f"↓ {ticker}")
+            try:
+                pred, _ = predict_ticker(ticker, models, feature_cols, macro_data)
+                if pred:
+                    rows.append({
+                        "Тикер":    ticker,
+                        "Название": TICKER_LABELS.get(ticker, ticker),
+                        H1_LABEL:   pred.get(H1_KEY,  0.5),
+                        H2_LABEL:   pred.get(H2_KEY,  0.5),
+                    })
+            except Exception:
+                pass
+        prog.empty()
+        return rows
+
+    def render_market_tab(ticker_list, label):
+        with st.spinner(f"Считаю прогнозы — {label}…"):
+            rows = run_forecasts(ticker_list, label)
+        if not rows:
+            st.warning("Нет данных. Проверьте интернет.")
+            return None
+        df_table = pd.DataFrame(rows)
+
+        n_all = len(df_table)
+        up1, dn1 = int((df_table[H1_LABEL] > 0.55).sum()), int((df_table[H1_LABEL] < 0.45).sum())
+        up20, dn20 = int((df_table[H2_LABEL] > 0.55).sum()), int((df_table[H2_LABEL] < 0.45).sum())
+        best   = df_table.loc[df_table[H1_LABEL].idxmax(), "Тикер"]
+        best_p = df_table[H1_LABEL].max()
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric(f":material/trending_up: Скорее вверх, {H1_DESC}", f"{up1} из {n_all}",
+              f"скорее вниз: {dn1}", delta_color="off")
+        c2.metric(":material/trending_up: Скорее вверх, 20 дней", f"{up20} из {n_all}",
+              f"скорее вниз: {dn20}", delta_color="off")
+        c3.metric(":material/emoji_events: Лучший сигнал", f"{best}", f"{best_p:.0%} вверх")
+        c4.metric(":material/calendar_month: Дата прогноза", datetime.now().strftime("%d.%m.%Y"))
+
+        st.divider()
+
+        col_l, col_r = st.columns([1, 1])
+        with col_l:
+            st.markdown(f'<div class="section-header">Прогноз роста ({H1_DESC})</div>', unsafe_allow_html=True)
+            df_sorted = df_table.sort_values(H1_LABEL, ascending=True)
+            colors = ["#26c281" if p > 0.5 else "#e74c3c" for p in df_sorted[H1_LABEL]]
+            fig_bar = go.Figure(go.Bar(
+                x=df_sorted[H1_LABEL], y=df_sorted["Тикер"],
+                orientation="h", marker_color=colors,
+                text=[f"{p:.1%}" for p in df_sorted[H1_LABEL]], textposition="outside",
+            ))
+            fig_bar.add_vline(x=0.5, line_dash="dot", line_color="#64748b", opacity=0.5)
+            apply_glass_chart_theme(
+                fig_bar,
+                height=max(300, len(rows) * 28),
+                margin=dict(l=10, r=50, t=10, b=10),
+                xaxis=dict(tickformat=".0%", range=[0, 1]),
+                yaxis=dict(showgrid=False), showlegend=False,
+            )
+            st.plotly_chart(fig_bar, use_container_width=True)
+
+        with col_r:
+            st.markdown('<div class="section-header">Прогноз роста (20 дней)</div>', unsafe_allow_html=True)
+            df_r20 = df_table.sort_values(H2_LABEL, ascending=True)
+            colors20 = ["#26c281" if p > 0.5 else "#e74c3c" for p in df_r20[H2_LABEL]]
+            fig_r20 = go.Figure(go.Bar(
+                x=df_r20[H2_LABEL], y=df_r20["Тикер"],
+                orientation="h", marker_color=colors20,
+                text=[f"{p:.1%}" for p in df_r20[H2_LABEL]], textposition="outside",
+            ))
+            fig_r20.add_vline(x=0.5, line_dash="dot", line_color="#64748b", opacity=0.5)
+            apply_glass_chart_theme(
+                fig_r20,
+                height=max(300, len(rows) * 28),
+                margin=dict(l=10, r=60, t=10, b=10),
+                xaxis=dict(tickformat=".0%", range=[0, 1]),
+                yaxis=dict(showgrid=False), showlegend=False,
+            )
+            st.plotly_chart(fig_r20, use_container_width=True)
+
+        st.markdown('<div class="section-header">Все прогнозы</div>', unsafe_allow_html=True)
+        display = df_table.copy()
+        display[H1_LABEL] = display[H1_LABEL].map("{:.1%}".format)
+        display[H2_LABEL] = display[H2_LABEL].map("{:.1%}".format)
+        st.caption("Нажми на строку, чтобы открыть разбор ниже.")
+        event = st.dataframe(
+            display, use_container_width=True, hide_index=True,
+            on_select="rerun", selection_mode="single-row", key=f"tbl_{label}",
+        )
+        picked_rows = event.selection.rows
+        return display.iloc[picked_rows[0]]["Тикер"] if picked_rows else None
+
+    with tab_us:
+        picked_us = render_market_tab(TICKERS_US, "США / Крипто")
+    with tab_ru:
+        picked_ru = render_market_tab(TICKERS_RU, "Россия MOEX")
+
+    all_tickers = TICKERS_US + TICKERS_RU
+    prev_picks = st.session_state.get("_stock_picks", {})
+    cur_picks = {"us": picked_us, "ru": picked_ru}
+    for k, v in cur_picks.items():
+        if v and v != prev_picks.get(k):
+            st.session_state["stock_sel"] = v
+    st.session_state["_stock_picks"] = cur_picks
+    st.session_state.setdefault("stock_sel", "AAPL" if "AAPL" in all_tickers else all_tickers[0])
+
+    st.divider()
+    st.markdown('<div class="section-header">Разбор инструмента</div>', unsafe_allow_html=True)
+    col_sel, col_per = st.columns([2, 3])
+    with col_sel:
+        sel_ticker = st.selectbox(
+            "Инструмент", all_tickers, key="stock_sel",
+            format_func=lambda t: f"{t} — {TICKER_LABELS.get(t, '')}",
+        )
+    with col_per:
+        period = st.select_slider("История", ["3mo", "6mo", "1y", "2y", "5y"], value="1y")
+    render_ticker_detail(sel_ticker, period)
+
+    if models_loaded and USING_LGBM and is_owner():
+        st.divider()
+        with st.expander(":material/analytics: Качество модели и история обучения (только для владельца)", expanded=False):
+            try:
+                from app_pages._model_quality import render_model_quality
+                render_model_quality(train_summary, _auto_retrain.read_history(ARTIFACTS_LGBM), train_summary.get("_source", "repo"))
+            except Exception as _mq_err:
+                st.warning(f"Не удалось показать качество модели: {_mq_err}")
 
 
 elif page == ":material/swords: Конфликты":
